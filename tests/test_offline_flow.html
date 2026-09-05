@@ -115,6 +115,7 @@
           <h2>${failed.length === 0 ? 'ALL OFFLINE TESTS PASSED' : 'OFFLINE TESTS FAILED'}</h2>
           <p>Total: ${results.length}, Passed: ${results.length - failed.length}, Failed: ${failed.length}</p>
         </div>
+        <pre>${JSON.stringify(results, null, 2)}</pre>
       `;
     }
 

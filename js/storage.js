@@ -54,6 +54,7 @@ export function saveOrder(orderData) {
     date: orderData.date,
     shopName: (orderData.shopName || '').trim(),
     customerName: (orderData.customerName || '').trim(),
+    phone: (orderData.phone || '').trim(),
     address: (orderData.address || '').trim(),
     items: (orderData.items || []).map(item => {
       const rateVal = Number(item.rate || item.product?.rate || 0);
