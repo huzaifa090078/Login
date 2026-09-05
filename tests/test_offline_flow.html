@@ -37,6 +37,7 @@
           date: '2026-09-05',
           shopName: 'Metro Mobile Plaza',
           customerName: 'Tariq Mehmood',
+          phone: '03001234567',
           address: 'Main Bazaar, Gujranwala',
           items: [
             { productId: 'charger-l400-micro', modelNumber: 'L-400', productName: 'ELVO Charger', variant: 'Micro', rate: 389, quantity: 4, lineTotal: 1556 },
@@ -59,6 +60,7 @@
         const retrieved = retrievedOrders[0];
         assert('Retrieved order retains shop name', retrieved.shopName === 'Metro Mobile Plaza');
         assert('Retrieved order retains customer name', retrieved.customerName === 'Tariq Mehmood');
+        assert('Retrieved order retains phone number', retrieved.phone === '03001234567');
         assert('Retrieved order retains items array with 2 items', retrieved.items.length === 2);
         assert('Pending count is 1', getPendingOrdersCount() === 1);
 
@@ -71,6 +73,7 @@
           customerInfo: {
             shopName: retrieved.shopName,
             customerName: retrieved.customerName,
+            phone: retrieved.phone,
             address: retrieved.address,
             date: retrieved.date
           },
@@ -83,6 +86,7 @@
         const waMsg = generateWhatsAppMessage(fakeState);
         assert('WhatsApp message contains exact header', waMsg.includes('*LOGIN ORDER INVOICE*'));
         assert('WhatsApp message contains Shop Name Metro Mobile Plaza', waMsg.includes('Shop Name: Metro Mobile Plaza'));
+        assert('WhatsApp message contains Phone Number', waMsg.includes('Phone: 03001234567'));
         assert('WhatsApp message contains products in 2-line block format', waMsg.includes('*L-400* / ELVO Charger - Micro') && waMsg.includes('Rate: Rs. 389 / Qty: 4 / Total: Rs. 1,556'));
         assert('WhatsApp message contains Total Items: 5', waMsg.includes('Total Items: 5'));
         assert('WhatsApp message contains Grand Total: Rs. 4,355', waMsg.includes('Grand Total: Rs. 4,355'));
