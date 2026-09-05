@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Phone Field Interactive Integration Test</title>
+</head>
+<body>
+  <h1>Phone Field Integration Test</h1>
+  <div id="mount"></div>
+  <div id="test-results">Running...</div>
+
+  <script type="module">
+    import { renderHeader } from '../js/components/header.js';
+    import { renderOrderSummary } from '../js/components/orderSummary.js';
+    import { getState, updateCustomerInfo, setQuantity, getWhatsAppUrl } from '../js/state.js';
+    import { getSavedOrders, clearAllOrders } from '../js/storage.js';
+
+    const results = [];
+    function assert(name, condition, details = '') {
+      if (condition) {
+        results.push({ name, status: 'PASS', details });
+        console.log(`[PASS] ${name}`);
+      } else {
+        results.push({ name, status: 'FAIL', details });
+        console.error(`[FAIL] ${name}: ${details}`);
+      }
+    }
+
+    async function runTest() {
+      clearAllOrders();
+
+      const container = document.getElementById('mount');
+      const headerDiv = document.createElement('div');
+      const summaryDiv = document.createElement('div');
+      container.appendChild(headerDiv);
+      container.appendChild(summaryDiv);
+
+      renderHeader(headerDiv);
+      renderOrderSummary(summaryDiv);
+
+      const phoneInput = document.getElementById('input-customer-phone');
+      const shopInput = document.getElementById('input-shop-name');
+      const customerInput = document.getElementById('input-customer-name');
+      const addressInput = document.getElementById('input-address');
+      const sendBtn = document.getElementById('btn-send-order');
+
+      // 1. Initial Attributes
+      assert('Phone input has type="tel"', phoneInput.type === 'tel');
+      assert('Phone input has inputmode="tel"', phoneInput.getAttribute('inputmode') === 'tel');
+      assert('Phone input has placeholder="03XX XXXXXXX"', phoneInput.placeholder === '03XX XXXXXXX');
+
+      // 2. Empty form validation on send
+      sendBtn.click();
+      const valModal = document.getElementById('validation-error-modal');
+      assert('Validation modal opens on empty submit', valModal.classList.contains('open'));
+
+      const errorList = document.getElementById('validation-error-list').textContent;
+      assert('Validation mentions Phone Number is required', errorList.includes('Phone Number is required'));
+      assert('Phone input has input-error class', phoneInput.classList.contains('input-error'));
+
+      // 3. Invalid phone format test
+      shopInput.value = 'Apex Mobile';
+      shopInput.dispatchEvent(new Event('input'));
+
+      customerInput.value = 'Hassan';
+      customerInput.dispatchEvent(new Event('input'));
+
+      addressInput.value = 'Shop 5, Hall Road';
+      addressInput.dispatchEvent(new Event('input'));
+
+      phoneInput.value = '04231234567'; // Landline Lahore
+      phoneInput.dispatchEvent(new Event('input'));
+
+      setQuantity('charger-l400-micro', 2);
+
+      sendBtn.click();
+      const errorList2 = document.getElementById('validation-error-list').textContent;
+      assert('Validation rejects landline/invalid format', errorList2.includes('Enter a valid Pakistani mobile number'));
+      assert('Phone input still has input-error class for invalid number', phoneInput.classList.contains('input-error'));
+
+      // 4. Valid formatted phone input (with dashes)
+      phoneInput.value = '0300-9876543';
+      phoneInput.dispatchEvent(new Event('input'));
+      assert('Phone input-error class removed on input', !phoneInput.classList.contains('input-error'));
+
+      // Click "View Details" to test modal presentation
+      const viewDetailsBtn = document.getElementById('btn-view-details');
+      viewDetailsBtn.click();
+
+      const summaryModal = document.getElementById('order-summary-modal');
+      assert('Order summary modal opened', summaryModal.classList.contains('open'));
+
+      const modalHtml = document.getElementById('modal-content-body').innerHTML;
+      assert('Summary modal displays normalized phone 03009876543', modalHtml.includes('03009876543'));
+
+      // Verify WhatsApp URL generation
+      const waUrl = getWhatsAppUrl();
+      assert('WhatsApp URL encodes normalized phone', waUrl.includes('Phone%3A%2003009876543'));
+
+      // Close modal
+      document.getElementById('modal-close-btn').click();
+
+      // Output test results
+      const failed = results.filter(r => r.status === 'FAIL');
+      const resDiv = document.getElementById('test-results');
+      resDiv.innerHTML = `
+        <div id="test-summary">
+          <h2>${failed.length === 0 ? 'ALL PHONE TESTS PASSED' : 'PHONE TESTS FAILED'}</h2>
+          <p>Total: ${results.length}, Passed: ${results.length - failed.length}, Failed: ${failed.length}</p>
+        </div>
+        <pre id="results-json">${JSON.stringify(results, null, 2)}</pre>
+      `;
+    }
+
+    runTest();
+  </script>
+</body>
+</html>
