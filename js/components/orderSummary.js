@@ -15,6 +15,8 @@ import {
   getOrderSummaryGrouped, 
   formatCurrency, 
   validateOrder, 
+  isValidPakistaniPhoneNumber,
+  normalizePakistaniPhoneNumber,
   getWhatsAppUrl,
   WHATSAPP_PHONE,
   setQuantity,
@@ -183,6 +185,9 @@ export function renderOrderSummary(container) {
     } else if (!state.customerInfo.customerName || !state.customerInfo.customerName.trim()) {
       const el = document.getElementById('input-customer-name');
       if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    } else if (!state.customerInfo.phone || !state.customerInfo.phone.trim() || !isValidPakistaniPhoneNumber(state.customerInfo.phone)) {
+      const el = document.getElementById('input-customer-phone');
+      if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     } else if (!state.customerInfo.address || !state.customerInfo.address.trim()) {
       const el = document.getElementById('input-address');
       if (el) { el.focus(); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
@@ -201,6 +206,7 @@ export function renderOrderSummary(container) {
       summaryBox.innerHTML = `
         <div class="offline-summary-row"><span>Shop:</span> <strong>${escapeHtml(savedOrder.shopName)}</strong></div>
         <div class="offline-summary-row"><span>Customer:</span> <strong>${escapeHtml(savedOrder.customerName)}</strong></div>
+        <div class="offline-summary-row"><span>Phone:</span> <strong>${escapeHtml(savedOrder.phone || '-')}</strong></div>
         <div class="offline-summary-row"><span>Items:</span> <strong>${savedOrder.totalItems} Units</strong></div>
         <div class="offline-summary-row"><span>Grand Total:</span> <strong>${formatCurrency(savedOrder.grandTotal)}</strong></div>
       `;
@@ -238,6 +244,7 @@ export function renderOrderSummary(container) {
       date: state.customerInfo.date,
       shopName: state.customerInfo.shopName,
       customerName: state.customerInfo.customerName,
+      phone: normalizePakistaniPhoneNumber(state.customerInfo.phone),
       address: state.customerInfo.address,
       items: allItems,
       totalItems: getTotalItems(),
@@ -276,13 +283,16 @@ export function renderOrderSummary(container) {
     // Clear customer inputs
     updateCustomerInfo('shopName', '');
     updateCustomerInfo('customerName', '');
+    updateCustomerInfo('phone', '');
     updateCustomerInfo('address', '');
 
     const shopEl = document.getElementById('input-shop-name');
     const custEl = document.getElementById('input-customer-name');
+    const phoneEl = document.getElementById('input-customer-phone');
     const addrEl = document.getElementById('input-address');
     if (shopEl) shopEl.value = '';
     if (custEl) custEl.value = '';
+    if (phoneEl) phoneEl.value = '';
     if (addrEl) addrEl.value = '';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -335,6 +345,7 @@ function highlightMissingCustomerFields() {
   const state = getState();
   const shopNameInput = document.getElementById('input-shop-name');
   const customerNameInput = document.getElementById('input-customer-name');
+  const customerPhoneInput = document.getElementById('input-customer-phone');
   const addressInput = document.getElementById('input-address');
 
   if (shopNameInput) {
@@ -350,6 +361,14 @@ function highlightMissingCustomerFields() {
       customerNameInput.classList.add('input-error');
     } else {
       customerNameInput.classList.remove('input-error');
+    }
+  }
+
+  if (customerPhoneInput) {
+    if (!state.customerInfo.phone || !state.customerInfo.phone.trim() || !isValidPakistaniPhoneNumber(state.customerInfo.phone)) {
+      customerPhoneInput.classList.add('input-error');
+    } else {
+      customerPhoneInput.classList.remove('input-error');
     }
   }
 
@@ -403,6 +422,10 @@ function populateModalContent(container) {
         <div>
           <span class="field-lbl">Customer:</span>
           <span class="field-val">${escapeHtml(state.customerInfo.customerName) || '<em style="color:#d9534f">Missing</em>'}</span>
+        </div>
+        <div>
+          <span class="field-lbl">Phone:</span>
+          <span class="field-val">${escapeHtml(normalizePakistaniPhoneNumber(state.customerInfo.phone)) || '<em style="color:#d9534f">Missing</em>'}</span>
         </div>
         <div>
           <span class="field-lbl">Date:</span>

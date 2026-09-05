@@ -16,7 +16,7 @@ import { ICONS } from '../icons.js';
 
 export function renderHeader(container) {
   const state = getState();
-  const { shopName, customerName, address, date } = state.customerInfo;
+  const { shopName, customerName, phone, address, date } = state.customerInfo;
   const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
   const pendingCount = getPendingOrdersCount();
 
@@ -84,12 +84,14 @@ export function renderHeader(container) {
         </div>
 
         <div class="form-group">
-          <label for="input-order-date">Date</label>
+          <label for="input-customer-phone">Phone Number *</label>
           <input 
-            type="date" 
-            id="input-order-date" 
+            type="tel" 
+            inputmode="tel"
+            id="input-customer-phone" 
             class="form-control" 
-            value="${date}"
+            placeholder="03XX XXXXXXX" 
+            value="${escapeHtml(phone)}"
           />
         </div>
 
@@ -103,6 +105,16 @@ export function renderHeader(container) {
             value="${escapeHtml(address)}"
           />
         </div>
+
+        <div class="form-group full-width">
+          <label for="input-order-date">Date</label>
+          <input 
+            type="date" 
+            id="input-order-date" 
+            class="form-control" 
+            value="${date}"
+          />
+        </div>
       </div>
     </section>
   `;
@@ -110,6 +122,7 @@ export function renderHeader(container) {
   // Bind input listeners
   const shopNameInput = container.querySelector('#input-shop-name');
   const customerNameInput = container.querySelector('#input-customer-name');
+  const customerPhoneInput = container.querySelector('#input-customer-phone');
   const dateInput = container.querySelector('#input-order-date');
   const addressInput = container.querySelector('#input-address');
 
@@ -120,6 +133,10 @@ export function renderHeader(container) {
   customerNameInput.addEventListener('input', (e) => {
     e.target.classList.remove('input-error');
     updateCustomerInfo('customerName', e.target.value);
+  });
+  customerPhoneInput.addEventListener('input', (e) => {
+    e.target.classList.remove('input-error');
+    updateCustomerInfo('phone', e.target.value);
   });
   dateInput.addEventListener('change', (e) => updateCustomerInfo('date', e.target.value));
   addressInput.addEventListener('input', (e) => {
