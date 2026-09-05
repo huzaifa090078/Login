@@ -26,6 +26,8 @@
       setSearchQuery,
       WHATSAPP_PHONE,
       formatDateForWhatsApp,
+      normalizePakistaniPhoneNumber,
+      isValidPakistaniPhoneNumber,
       validateOrder,
       generateWhatsAppMessage,
       getWhatsAppUrl
@@ -151,22 +153,46 @@
       // 10. Date formatting for WhatsApp
       assert('formatDateForWhatsApp formats 2026-09-05 to 05-Sep-2026', formatDateForWhatsApp('2026-09-05') === '05-Sep-2026');
 
+      // 10b. Pakistani Phone Normalization & Validation
+      assert('normalizePakistaniPhoneNumber standard 11 digits', normalizePakistaniPhoneNumber('03001234567') === '03001234567');
+      assert('normalizePakistaniPhoneNumber removes dashes', normalizePakistaniPhoneNumber('0300-1234567') === '03001234567');
+      assert('normalizePakistaniPhoneNumber removes spaces', normalizePakistaniPhoneNumber('0300 1234567') === '03001234567');
+      assert('normalizePakistaniPhoneNumber converts +92 prefix', normalizePakistaniPhoneNumber('+923001234567') === '03001234567');
+      assert('normalizePakistaniPhoneNumber converts 0092 prefix', normalizePakistaniPhoneNumber('00923001234567') === '03001234567');
+      assert('normalizePakistaniPhoneNumber converts 92 prefix', normalizePakistaniPhoneNumber('923001234567') === '03001234567');
+
+      assert('isValidPakistaniPhoneNumber accepts standard 03001234567', isValidPakistaniPhoneNumber('03001234567') === true);
+      assert('isValidPakistaniPhoneNumber accepts 03123456789', isValidPakistaniPhoneNumber('03123456789') === true);
+      assert('isValidPakistaniPhoneNumber accepts 03211234567', isValidPakistaniPhoneNumber('03211234567') === true);
+      assert('isValidPakistaniPhoneNumber accepts 03331234567', isValidPakistaniPhoneNumber('03331234567') === true);
+      assert('isValidPakistaniPhoneNumber accepts 03451234567', isValidPakistaniPhoneNumber('03451234567') === true);
+      assert('isValidPakistaniPhoneNumber accepts formatted 0300-1234567', isValidPakistaniPhoneNumber('0300-1234567') === true);
+      assert('isValidPakistaniPhoneNumber accepts international +92 300 1234567', isValidPakistaniPhoneNumber('+92 300 1234567') === true);
+      assert('isValidPakistaniPhoneNumber rejects landline 04231234567', isValidPakistaniPhoneNumber('04231234567') === false);
+      assert('isValidPakistaniPhoneNumber rejects short number 12345', isValidPakistaniPhoneNumber('12345') === false);
+      assert('isValidPakistaniPhoneNumber rejects 10 digits 0300123456', isValidPakistaniPhoneNumber('0300123456') === false);
+      assert('isValidPakistaniPhoneNumber rejects 12 digits 030012345678', isValidPakistaniPhoneNumber('030012345678') === false);
+      assert('isValidPakistaniPhoneNumber rejects empty string', isValidPakistaniPhoneNumber('') === false);
+
       // 11. Send Order Validation
       const testState = {
-        customerInfo: { shopName: '', customerName: '', address: '', date: '2026-09-05' },
+        customerInfo: { shopName: '', customerName: '', phone: '', address: '', date: '2026-09-05' },
         selectedCategory: 'chargers',
         searchQuery: '',
         cart: {}
       };
       
       const v1 = validateOrder(testState);
-      assert('Validation fails when all fields empty & cart empty', !v1.isValid && v1.errors.length === 4);
+      assert('Validation fails when all fields empty & cart empty', !v1.isValid && v1.errors.length === 5);
+      assert('Validation requires phone number', v1.errors.includes('Phone Number is required'));
 
       testState.customerInfo.shopName = 'ABC Mobiles';
+      testState.customerInfo.phone = 'invalid-phone';
       const v2 = validateOrder(testState);
-      assert('Validation fails when customerName and address missing', !v2.isValid && v2.errors.includes('Customer Name is required'));
+      assert('Validation fails when phone format is invalid', !v2.isValid && v2.errors.includes('Enter a valid Pakistani mobile number (e.g. 03001234567)'));
 
       testState.customerInfo.customerName = 'Ali';
+      testState.customerInfo.phone = '0300-1234567';
       testState.customerInfo.address = 'D-Ground, Faisalabad';
       testState.cart = {
         'charger-l400-micro': 5,
@@ -176,13 +202,14 @@
       
       // With customer details and 10 items in cart, validation should now pass
       const v3 = validateOrder(testState);
-      assert('Validation passes when shopName, customerName, address and items exist', v3.isValid, `Errors: ${v3.errors.join(', ')}`);
+      assert('Validation passes when shopName, customerName, phone, address and items exist', v3.isValid, `Errors: ${v3.errors.join(', ')}`);
 
       // 12. WhatsApp Message Generation
       const waMsg = generateWhatsAppMessage(testState);
       assert('WhatsApp message contains header divider and title', waMsg.includes('━━━━━━━━━━━━━━━━━━━━\n*LOGIN ORDER INVOICE*\nDate: 05-Sep-2026\n━━━━━━━━━━━━━━━━━━━━'));
       assert('WhatsApp message contains Shop Name', waMsg.includes('Shop Name: ABC Mobiles'));
       assert('WhatsApp message contains Customer Name', waMsg.includes('Customer Name: Ali'));
+      assert('WhatsApp message contains Phone Number', waMsg.includes('Phone: 03001234567'));
       assert('WhatsApp message contains Address', waMsg.includes('Address: D-Ground, Faisalabad'));
       assert('WhatsApp message contains Date 05-Sep-2026', waMsg.includes('Date: 05-Sep-2026'));
       assert('WhatsApp message contains Model / Description format', waMsg.includes('*L-400* / ELVO Charger - Micro'));
@@ -205,6 +232,7 @@
           date: '2026-09-05',
           shopName: 'Al-Rehman Mobiles',
           customerName: 'Usman',
+          phone: '03001234567',
           address: 'Karkhano Market, Peshawar',
           items: [
             { productId: 'charger-l400-micro', modelNumber: 'L-400', productName: 'ELVO Charger', variant: 'Micro', rate: 389, quantity: 2, lineTotal: 778 },
@@ -221,6 +249,7 @@
         assert('Saved order retains totalItems (5)', saved.totalItems === 5);
         assert('Saved order retains grandTotal (1405)', saved.grandTotal === 1405);
         assert('Saved order retains line items', saved.items.length === 2);
+        assert('Saved order retains phone number', saved.phone === '03001234567');
 
         // 15. Persistence & Retrieval across sessions
         const allOrders = storage.getSavedOrders();

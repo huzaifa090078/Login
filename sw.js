@@ -3,7 +3,7 @@
  * Cache-first / Stale-While-Revalidate offline-first strategy
  */
 
-const CACHE_NAME = 'login-order-form-v5';
+const CACHE_NAME = 'login-order-form-v6';
 
 const ASSETS_TO_CACHE = [
   './',
