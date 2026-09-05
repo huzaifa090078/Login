@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="description" content="LOGIN Mobile Accessories - Wholesale Field Order Form" />
+  
+  <!-- PWA & Mobile Web App Meta -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LOGIN Orders" />
+
+  <title>LOGIN - Wholesale Order Form</title>
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header & Customer Details Mount -->
+    <div id="header-mount"></div>
+
+    <!-- Global Product Search Bar Mount -->
+    <div id="search-mount"></div>
+
+    <!-- Category Tabs Navigation Mount -->
+    <div id="category-mount"></div>
+
+    <!-- Product Catalog Feed Mount -->
+    <main id="product-list-mount"></main>
+
+    <!-- Bottom Sticky Order Bar & Modal Mount -->
+    <div id="summary-mount"></div>
+
+    <!-- Saved & Pending Orders Modal Mount -->
+    <div id="saved-orders-mount"></div>
+
+    <!-- Catalog Manager Modal Mount -->
+    <div id="catalog-manager-mount"></div>
+  </div>
+
+  <!-- Main ES Module Entry Point -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

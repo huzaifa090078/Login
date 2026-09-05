@@ -1,0 +1,65 @@
+[
+  {
+    "id": "chargers",
+    "name": "Chargers",
+    "icon": "charger",
+    "sortOrder": 1,
+    "active": true
+  },
+  {
+    "id": "data-cables",
+    "name": "Data Cables",
+    "icon": "cable",
+    "sortOrder": 2,
+    "active": true
+  },
+  {
+    "id": "handsfree",
+    "name": "Handsfree",
+    "icon": "headphones",
+    "sortOrder": 3,
+    "active": true
+  },
+  {
+    "id": "power-banks",
+    "name": "Power Banks",
+    "icon": "power",
+    "sortOrder": 4,
+    "active": true
+  },
+  {
+    "id": "smart-watches",
+    "name": "Smart Watches",
+    "icon": "watch",
+    "sortOrder": 5,
+    "active": true
+  },
+  {
+    "id": "tws",
+    "name": "TWS",
+    "icon": "earbuds",
+    "sortOrder": 6,
+    "active": true
+  },
+  {
+    "id": "neckband-headphones",
+    "name": "Neckband & Headphones",
+    "icon": "neckband",
+    "sortOrder": 7,
+    "active": true
+  },
+  {
+    "id": "speakers",
+    "name": "Speakers",
+    "icon": "speaker",
+    "sortOrder": 8,
+    "active": true
+  },
+  {
+    "id": "batteries",
+    "name": "Batteries",
+    "icon": "battery",
+    "sortOrder": 9,
+    "active": true
+  }
+]

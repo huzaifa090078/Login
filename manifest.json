@@ -1,0 +1,20 @@
+{
+  "name": "LOGIN Wholesale Order Form",
+  "short_name": "LOGIN Orders",
+  "description": "Mobile Accessories Wholesale Field Order Form for LOGIN Sales Representatives",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"]
+}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Viewport & Layout Verification</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    iframe { border: 1px solid #ccc; margin-bottom: 20px; display: block; }
+    .report { background: #f5f5f5; padding: 10px; margin-bottom: 20px; white-space: pre; }
+  </style>
+</head>
+<body>
+  <h1>Mobile Viewports Verification</h1>
+  <div id="results">Running viewport tests...</div>
+
+  <script>
+    const viewports = [360, 375, 390, 412];
+    const results = {};
+
+    async function testViewport(width) {
+      return new Promise((resolve) => {
+        const iframe = document.createElement('iframe');
+        iframe.style.width = width + 'px';
+        iframe.style.height = '700px';
+        iframe.src = '../index.html';
+        document.body.appendChild(iframe);
+
+        iframe.onload = () => {
+          setTimeout(() => {
+            try {
+              const doc = iframe.contentDocument || iframe.contentWindow.document;
+              const pills = Array.from(doc.querySelectorAll('.category-pill'));
+              const rows = {};
+              pills.forEach((p) => {
+                const rect = p.getBoundingClientRect();
+                const top = Math.round(rect.top);
+                if (!rows[top]) rows[top] = [];
+                rows[top].push({
+                  name: p.querySelector('.pill-name').textContent.trim(),
+                  width: Math.round(rect.width),
+                  height: Math.round(rect.height),
+                  hasSvgIcon: !!p.querySelector('.pill-icon svg.icon-svg')
+                });
+              });
+
+              const rowKeys = Object.keys(rows).sort((a, b) => Number(a) - Number(b));
+              const pillsPerRow = rowKeys.map(k => rows[k].length);
+              const bodyScrollWidth = doc.body.scrollWidth;
+              const bodyClientWidth = doc.body.clientWidth;
+
+              // Check search input and icon
+              const searchInput = doc.querySelector('.search-input');
+              const searchSvg = doc.querySelector('.search-icon svg.icon-svg');
+              const headerOrdersSvg = doc.querySelector('.btn-header-orders svg.icon-svg');
+
+              // Click first category to test product card appearance
+              pills[0].click();
+
+              setTimeout(() => {
+                const cards = Array.from(doc.querySelectorAll('.product-card'));
+                const firstCard = cards[0];
+                let cardSteppersValid = false;
+                if (firstCard) {
+                  const minusSvg = firstCard.querySelector('.btn-minus svg.icon-svg');
+                  const plusSvg = firstCard.querySelector('.btn-plus svg.icon-svg');
+                  const qtyInput = firstCard.querySelector('.qty-input');
+                  cardSteppersValid = !!(minusSvg && plusSvg && qtyInput);
+                }
+
+                const overflowingElements = Array.from(doc.querySelectorAll('*'))
+                  .filter(el => el.scrollWidth > bodyClientWidth || el.offsetWidth > bodyClientWidth)
+                  .map(el => ({ tag: el.tagName, id: el.id, class: el.className, scrollWidth: el.scrollWidth, offsetWidth: el.offsetWidth }))
+                  .slice(0, 10);
+
+                resolve({
+                  width,
+                  totalPills: pills.length,
+                  rowCount: rowKeys.length,
+                  pillsPerRow,
+                  hasHorizontalScroll: bodyScrollWidth > bodyClientWidth,
+                  bodyClientWidth,
+                  bodyScrollWidth,
+                  overflowingElements,
+                  allPillsHaveSvg: pills.every(p => !!p.querySelector('.pill-icon svg.icon-svg')),
+                  searchHasSvg: !!searchSvg,
+                  headerHasSvg: !!headerOrdersSvg,
+                  productsRendered: cards.length,
+                  cardSteppersValid,
+                  status: (pills.length === 9 && rowKeys.length === 3 && pillsPerRow.every(c => c === 3) && !(bodyScrollWidth > bodyClientWidth)) ? 'PASS' : 'FAIL'
+                });
+              }, 200);
+            } catch(err) {
+              resolve({ width, error: err.message, status: 'FAIL' });
+            }
+          }, 400);
+        };
+      });
+    }
+
+    async function runAll() {
+      for (const w of viewports) {
+        results[w] = await testViewport(w);
+      }
+      const div = document.getElementById('results');
+      div.innerHTML = `<pre id="final-json">${JSON.stringify(results, null, 2)}</pre>`;
+      window.__VIEWPORT_RESULTS__ = results;
+    }
+
+    runAll();
+  </script>
+</body>
+</html>

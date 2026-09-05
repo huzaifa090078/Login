@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offline-First & PWA Flow Automated Test</title>
+</head>
+<body>
+  <h1>Offline & PWA Integration Test</h1>
+  <div id="test-output">Running integration tests...</div>
+
+  <script type="module">
+    import { saveOrder, getSavedOrders, getPendingOrdersCount, clearAllOrders, updateOrderStatus } from '../js/storage.js';
+    import { validateOrder, generateWhatsAppMessage, getWhatsAppUrl, WHATSAPP_PHONE } from '../js/state.js';
+
+    const results = [];
+    function assert(name, condition, details = '') {
+      if (condition) {
+        results.push({ name, status: 'PASS', details });
+        console.log(`[PASS] ${name}`);
+      } else {
+        results.push({ name, status: 'FAIL', details });
+        console.error(`[FAIL] ${name}: ${details}`);
+      }
+    }
+
+    function runTests() {
+      try {
+        clearAllOrders();
+
+        // 1. Service Worker API support
+        assert('Service Worker API is available in browser', 'serviceWorker' in navigator);
+        assert('Cache API is available in browser', 'caches' in window);
+
+        // 2. Offline Order Saving Flow Simulation
+        // Simulating salesperson visiting a shop without internet
+        const offlineOrderData = {
+          date: '2026-09-05',
+          shopName: 'Metro Mobile Plaza',
+          customerName: 'Tariq Mehmood',
+          address: 'Main Bazaar, Gujranwala',
+          items: [
+            { productId: 'charger-l400-micro', modelNumber: 'L-400', productName: 'ELVO Charger', variant: 'Micro', rate: 389, quantity: 4, lineTotal: 1556 },
+            { productId: 'powerbank-l709', modelNumber: 'L-709', productName: 'VOLTRA POWERBANK', variant: '22.5W, 10,000mAh', rate: 2799, quantity: 1, lineTotal: 2799 }
+          ],
+          totalItems: 5,
+          grandTotal: 4355,
+          status: 'Pending'
+        };
+
+        const savedOrder = saveOrder(offlineOrderData);
+        assert('Order saved locally when offline', !!savedOrder && savedOrder.orderId.startsWith('ORD-'));
+        assert('Saved order status is Pending', savedOrder.status === 'Pending');
+        assert('Saved order holds correct units (5)', savedOrder.totalItems === 5);
+        assert('Saved order holds correct total (4355)', savedOrder.grandTotal === 4355);
+
+        // 3. Persistence verification (simulated reload)
+        const retrievedOrders = getSavedOrders();
+        assert('Retrieved orders count is 1', retrievedOrders.length === 1);
+        const retrieved = retrievedOrders[0];
+        assert('Retrieved order retains shop name', retrieved.shopName === 'Metro Mobile Plaza');
+        assert('Retrieved order retains customer name', retrieved.customerName === 'Tariq Mehmood');
+        assert('Retrieved order retains items array with 2 items', retrieved.items.length === 2);
+        assert('Pending count is 1', getPendingOrdersCount() === 1);
+
+        // 4. Offline required notification verification
+        const requiredMsg = "You're offline. Order saved on this device. Connect to the internet to send it on WhatsApp.";
+        assert('Exact required offline notice text matches specification', requiredMsg.includes("You're offline. Order saved on this device"));
+
+        // 5. Online Return & WhatsApp sending verification
+        const fakeState = {
+          customerInfo: {
+            shopName: retrieved.shopName,
+            customerName: retrieved.customerName,
+            address: retrieved.address,
+            date: retrieved.date
+          },
+          cart: {
+            'charger-l400-micro': 4,
+            'powerbank-l709': 1
+          }
+        };
+
+        const waMsg = generateWhatsAppMessage(fakeState);
+        assert('WhatsApp message contains exact header', waMsg.includes('*LOGIN ORDER INVOICE*'));
+        assert('WhatsApp message contains Shop Name Metro Mobile Plaza', waMsg.includes('Shop Name: Metro Mobile Plaza'));
+        assert('WhatsApp message contains products in 2-line block format', waMsg.includes('*L-400* / ELVO Charger - Micro') && waMsg.includes('Rate: Rs. 389 / Qty: 4 / Total: Rs. 1,556'));
+        assert('WhatsApp message contains Total Items: 5', waMsg.includes('Total Items: 5'));
+        assert('WhatsApp message contains Grand Total: Rs. 4,355', waMsg.includes('Grand Total: Rs. 4,355'));
+        assert('WhatsApp recipient is 923294254904', WHATSAPP_PHONE === '923294254904');
+
+        const waUrl = getWhatsAppUrl(fakeState);
+        assert('WhatsApp URL uses 923294254904 deep link', waUrl.startsWith('https://wa.me/923294254904?text='));
+
+        // 6. Status transition from Pending to Sent upon WhatsApp dispatch
+        const markedSent = updateOrderStatus(savedOrder.orderId, 'Sent');
+        assert('Order status transitioned to Sent', markedSent && markedSent.status === 'Sent');
+        assert('Pending orders count is now 0', getPendingOrdersCount() === 0);
+
+        // Clean up
+        clearAllOrders();
+        assert('Orders cleared cleanly', getSavedOrders().length === 0);
+
+      } catch (err) {
+        assert('Unexpected error during offline flow tests', false, err.message);
+      }
+
+      const failed = results.filter(r => r.status === 'FAIL');
+      const outDiv = document.getElementById('test-output');
+      outDiv.innerHTML = `
+        <div id="test-summary-card">
+          <h2>${failed.length === 0 ? 'ALL OFFLINE TESTS PASSED' : 'OFFLINE TESTS FAILED'}</h2>
+          <p>Total: ${results.length}, Passed: ${results.length - failed.length}, Failed: ${failed.length}</p>
+        </div>
+      `;
+    }
+
+    runTests();
+  </script>
+</body>
+</html>

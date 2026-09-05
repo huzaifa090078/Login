@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="100" fill="#111111"/>
+  <rect x="40" y="40" width="432" height="432" rx="70" fill="#1A1A1A" stroke="#FFC700" stroke-width="8"/>
+  <rect x="80" y="140" width="352" height="120" rx="20" fill="#FFC700"/>
+  <text x="256" y="225" font-family="system-ui, -apple-system, sans-serif" font-size="78" font-weight="900" fill="#111111" text-anchor="middle" letter-spacing="6">LOGIN</text>
+  <text x="256" y="320" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="800" fill="#FFFFFF" text-anchor="middle" letter-spacing="4">SMART ACCESSORIES</text>
+  <text x="256" y="365" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="#FFC700" text-anchor="middle" letter-spacing="2">FIELD SALES &amp; ORDERS</text>
+  <circle cx="256" cy="415" r="8" fill="#FFC700"/>
+</svg>
