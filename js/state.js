@@ -17,6 +17,7 @@ const state = {
   customerInfo: {
     shopName: '',
     customerName: '',
+    phone: '',
     address: '',
     date: getTodayISODate(),
   },
@@ -186,6 +187,25 @@ export function formatDateForWhatsApp(isoDate) {
   return isoDate;
 }
 
+export function normalizePakistaniPhoneNumber(input) {
+  if (!input || typeof input !== 'string') return '';
+  let cleaned = input.trim().replace(/[\s\-_().]/g, '');
+  if (cleaned.startsWith('+92')) {
+    cleaned = '0' + cleaned.slice(3);
+  } else if (cleaned.startsWith('0092')) {
+    cleaned = '0' + cleaned.slice(4);
+  } else if (cleaned.startsWith('92') && cleaned.length === 12) {
+    cleaned = '0' + cleaned.slice(2);
+  }
+  return cleaned;
+}
+
+export function isValidPakistaniPhoneNumber(input) {
+  if (!input) return false;
+  const normalized = normalizePakistaniPhoneNumber(input);
+  return /^03\d{9}$/.test(normalized);
+}
+
 export function validateOrder(customState = state) {
   const errors = [];
   const customer = customState.customerInfo;
@@ -195,6 +215,11 @@ export function validateOrder(customState = state) {
   }
   if (!customer.customerName || !customer.customerName.trim()) {
     errors.push('Customer Name is required');
+  }
+  if (!customer.phone || !customer.phone.trim()) {
+    errors.push('Phone Number is required');
+  } else if (!isValidPakistaniPhoneNumber(customer.phone)) {
+    errors.push('Enter a valid Pakistani mobile number (e.g. 03001234567)');
   }
   if (!customer.address || !customer.address.trim()) {
     errors.push('Address is required');
@@ -255,6 +280,7 @@ export function generateWhatsAppMessage(customState = state) {
 
   const shopName = customer.shopName ? customer.shopName.trim() : '';
   const customerName = customer.customerName ? customer.customerName.trim() : '';
+  const phone = customer.phone ? normalizePakistaniPhoneNumber(customer.phone) : '';
   const address = customer.address ? customer.address.trim() : '';
 
   // 1. Header Section
@@ -266,6 +292,9 @@ export function generateWhatsAppMessage(customState = state) {
   // 2. Customer Information Section (concise lines)
   msg += `Shop Name: ${shopName}\n`;
   msg += `Customer Name: ${customerName}\n`;
+  if (phone) {
+    msg += `Phone: ${phone}\n`;
+  }
   msg += `Address: ${address}\n`;
   msg += `${divider}\n`;
 
