@@ -17,7 +17,6 @@ import { ICONS } from '../icons.js';
 export function renderHeader(container) {
   const state = getState();
   const { shopName, customerName, phone, address, date } = state.customerInfo;
-  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
   const pendingCount = getPendingOrdersCount();
 
   container.innerHTML = `
@@ -32,11 +31,6 @@ export function renderHeader(container) {
         </div>
 
         <div class="header-actions">
-          <div class="network-badge ${isOnline ? 'online' : 'offline'}" id="network-status-badge">
-            <span class="network-dot"></span>
-            <span class="network-text">${isOnline ? 'Online' : 'Offline'}</span>
-          </div>
-
           <button type="button" class="btn-header-orders btn-header-catalog" id="btn-header-open-catalog" aria-label="Open Catalog Manager" title="Catalog Manager">
             <span class="btn-header-icon">${ICONS.catalog}</span>
             <span>Catalog</span>
@@ -162,19 +156,6 @@ export function renderHeader(container) {
   if (openOrdersBtn) {
     openOrdersBtn.addEventListener('click', openSavedOrdersModal);
   }
-
-  // Network Online / Offline Listeners
-  const updateNetworkStatus = (online) => {
-    const badge = document.getElementById('network-status-badge');
-    if (badge) {
-      badge.className = `network-badge ${online ? 'online' : 'offline'}`;
-      const textEl = badge.querySelector('.network-text');
-      if (textEl) textEl.textContent = online ? 'Online' : 'Offline';
-    }
-  };
-
-  window.addEventListener('online', () => updateNetworkStatus(true));
-  window.addEventListener('offline', () => updateNetworkStatus(false));
 
   // Storage listener for pending orders count
   subscribeStorage(() => {
