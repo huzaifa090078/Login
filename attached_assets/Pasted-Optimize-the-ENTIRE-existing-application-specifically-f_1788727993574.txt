@@ -1,0 +1,193 @@
+Optimize the ENTIRE existing application specifically for mobile phones.
+
+IMPORTANT:
+
+* This application will be used primarily/only on mobile phones.
+* Do NOT rebuild the application from scratch.
+* Do NOT change the existing design, branding, colors, product data, business logic, or functionality unnecessarily.
+* Preserve all existing features.
+* Make the existing UI properly mobile-first rather than simply shrinking the desktop version.
+
+### 1. Mobile-first layout
+
+Make every section fit properly on common smartphone screen sizes, especially:
+
+* 320px
+* 360px
+* 375px
+* 390px
+* 412px
+* 430px
+
+There must be:
+
+* No horizontal scrolling.
+* No content cut off from either side.
+* No overlapping elements.
+* No elements going outside the viewport.
+* No unnecessary large empty spaces.
+* Proper spacing between sections.
+
+### 2. Header / Navigation
+
+Optimize the header for mobile:
+
+* Keep the most important information visible.
+* Make buttons easy to tap.
+* Prevent text from wrapping awkwardly.
+* If the existing navigation is too wide, adapt it to a mobile-friendly layout.
+* Keep the current branding and functionality.
+
+### 3. Product/catalog section
+
+Optimize product cards for mobile:
+
+* Cards should fit naturally within the screen width.
+* Product name should remain readable.
+* Model number/variant information should remain readable.
+* Category/status labels should not overlap.
+* Price should remain clearly visible.
+* "In Stock", "Out of Stock", and "Coming Soon" labels should remain properly visible.
+* Buttons should be large enough to tap comfortably.
+
+Do NOT unnecessarily make cards extremely tall or use excessive spacing.
+
+### 4. Forms and inputs
+
+Optimize all input fields:
+
+* Full usable width within the mobile container.
+* Minimum comfortable touch target.
+* Appropriate font size.
+* No input should cause the page to zoom unexpectedly on iPhone.
+* Use `inputmode` appropriately where required.
+* Labels and placeholders must remain readable.
+* Keyboard should not hide important form controls.
+
+### 5. Buttons
+
+Make all buttons mobile-friendly:
+
+* Comfortable tap area.
+* Proper spacing between buttons.
+* No buttons touching each other.
+* No text cut-off.
+* Buttons should remain accessible when the keyboard is open.
+
+### 6. Modals / confirmation dialogs
+
+Optimize all existing modals, including the Delete Confirmation dialog:
+
+* Fit properly inside the mobile viewport.
+* Do not extend beyond the screen.
+* Buttons should be easy to tap.
+* Text should wrap naturally.
+* No horizontal scrolling inside the modal.
+
+### 7. Order/customer information
+
+Make sure customer information, including:
+
+* Name
+* Phone Number
+* Order details
+* Product information
+* Price
+* Quantity
+
+is clearly readable on mobile without requiring horizontal scrolling.
+
+### 8. Typography
+
+Adjust typography specifically for mobile:
+
+* Avoid text that is too small.
+* Avoid unnecessarily huge headings.
+* Maintain a clear visual hierarchy.
+* Prevent long product names/model numbers from breaking the layout.
+
+Use responsive sizing where appropriate.
+
+### 9. Images and icons
+
+Make all images and icons responsive.
+
+They must:
+
+* Never overflow their containers.
+* Maintain their aspect ratio.
+* Load correctly.
+* Remain sharp and properly positioned.
+
+### 10. Mobile viewport and CSS
+
+Verify that the application has the correct viewport configuration, including:
+
+`<meta name="viewport" content="width=device-width, initial-scale=1.0">`
+
+Review the existing CSS for:
+
+* Fixed widths
+* Fixed heights
+* Desktop-only layouts
+* Overflow issues
+* Absolute positioning problems
+* Large margins/padding
+* Elements wider than the viewport
+
+Replace problematic fixed dimensions with responsive solutions where necessary.
+
+### 11. Safe area
+
+Make the application comfortable on modern phones with notches/home indicators.
+
+Consider appropriate safe-area handling where necessary.
+
+### 12. Performance
+
+Since this is a mobile-only application:
+
+* Keep CSS efficient.
+* Avoid unnecessary animations.
+* Avoid heavy JavaScript changes.
+* Do not add unnecessary libraries.
+* Keep the page fast to load on mobile internet.
+
+### 13. Testing
+
+Before finishing, test the complete application at these viewport sizes:
+
+320 × 568
+360 × 800
+375 × 812
+390 × 844
+412 × 915
+430 × 932
+
+Check EVERY major screen/section, not just the homepage.
+
+Verify:
+
+* No horizontal scrollbar.
+* No overlapping elements.
+* No clipped text.
+* No broken buttons.
+* No broken forms.
+* No broken product cards.
+* No broken modals.
+* No console errors.
+* Existing functionality still works.
+* Customer phone number functionality still works.
+* Delete confirmation still works.
+* In Stock / Out of Stock / Coming Soon logic still works.
+* Product prices remain unchanged unless explicitly edited.
+
+### Most important requirement
+
+This is a **mobile-first application**.
+
+Do not simply add a few media queries and consider the task complete.
+
+Inspect the entire existing UI and make every component work naturally on a smartphone while preserving the current design and functionality.
+
+Do not make unrelated changes.
