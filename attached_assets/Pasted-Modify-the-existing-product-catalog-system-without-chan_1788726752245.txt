@@ -1,0 +1,93 @@
+Modify the existing product/catalog system without changing the current UI design or removing any existing functionality.
+
+I need two specific logic changes:
+
+### 1. Separate "Out of Stock" from "Coming Soon"
+
+Currently, some products are being shown as "Coming Soon" when they are actually out of stock. Fix this logic.
+
+There must be THREE clearly separate product states:
+
+* **In Stock**
+* **Out of Stock**
+* **Coming Soon**
+
+Rules:
+
+* If a product is currently unavailable because its existing stock has finished, show **"Out of Stock"**.
+* Do NOT show "Coming Soon" for an item just because it is out of stock.
+* If a product is specifically configured as **Coming Soon**, it must continue to show **"Coming Soon"**.
+* Existing Coming Soon products must NOT automatically become Out of Stock.
+* Coming Soon and Out of Stock must be controlled independently.
+
+For example:
+
+Product A:
+`status: out_of_stock`
+→ Display: **OUT OF STOCK**
+
+Product B:
+`status: coming_soon`
+→ Display: **COMING SOON**
+
+Product C:
+`status: in_stock`
+→ Display normally and remain orderable according to the existing functionality.
+
+Do not infer "Coming Soon" from stock quantity alone if the product has an explicit status.
+
+### 2. Product price must NOT change automatically based on stock status
+
+The product's price must be completely independent from its stock status.
+
+If a product is:
+
+* In Stock
+* Out of Stock
+* Coming Soon
+
+its price must remain exactly the same unless I explicitly change the product's price.
+
+For example:
+
+Product price = Rs. 1,250
+
+If it becomes Out of Stock:
+→ Price must still be Rs. 1,250
+
+If it becomes Coming Soon:
+→ Price must still be Rs. 1,250
+
+If it becomes In Stock again:
+→ Price must still be Rs. 1,250
+
+There must be NO automatic price modification when:
+
+* stock changes
+* availability changes
+* product becomes Out of Stock
+* product becomes Coming Soon
+* product returns to In Stock
+
+Only an explicit price update should modify the product price.
+
+### Important implementation requirements
+
+1. Inspect the existing product data structure and state-management logic before making changes.
+2. Find exactly where stock/availability status is determined.
+3. Find exactly where product prices are determined or modified.
+4. Separate availability/status logic from price logic.
+5. Preserve all existing product data and current prices.
+6. Do NOT reset existing prices.
+7. Do NOT randomly regenerate or recalculate prices.
+8. Do NOT change the existing UI unless required to correctly display the three statuses.
+9. Preserve the existing Coming Soon products exactly as they are.
+10. Make sure Out of Stock products display "Out of Stock", not "Coming Soon".
+11. Verify that changing stock status does not modify the stored product price.
+12. Test all three states on multiple products before finishing.
+
+The key requirement is:
+
+**Stock status controls availability/display only. Price is an independent value and must remain unchanged until I explicitly edit the price.**
+
+Do not rebuild the catalog. Modify the existing logic cleanly and minimally.

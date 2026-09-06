@@ -4,7 +4,7 @@
  * Lightweight, practical interface to:
  * - Add, edit, reorder, and toggle categories
  * - Add, edit, reorder, price, and toggle products
- * - Mark products as "Coming Soon"
+ * - Mark products as "In Stock", "Out of Stock", or "Coming Soon"
  * - Export and Import catalog JSON backups
  * - Reset to baseline default catalog
  */
@@ -31,7 +31,7 @@ import { ICONS, SUPPORTED_CATEGORY_ICONS, getCategoryIcon } from '../icons.js';
 let activeTab = 'products'; // 'products' | 'categories' | 'backup'
 let selectedCategoryFilter = 'all';
 let searchQuery = '';
-let statusFilter = 'all'; // 'all' | 'available' | 'coming-soon'
+let statusFilter = 'all'; // 'all' | 'in-stock' | 'out-of-stock' | 'coming-soon'
 
 // Editing state
 let editingCategoryId = null; // null for add mode
@@ -148,18 +148,21 @@ export function renderCatalogManagerModal(container) {
             <div class="form-group">
               <label for="prod-form-rate">Wholesale Rate (PKR) *</label>
               <input type="number" id="prod-form-rate" class="form-control" min="0" step="1" placeholder="e.g. 599" />
-              <small class="form-hint">Leave blank if Coming Soon</small>
+              <small class="form-hint">Optional only when no price is available yet.</small>
             </div>
             <div class="form-group">
               <label for="prod-form-sort">Display Order</label>
               <input type="number" id="prod-form-sort" class="form-control" min="1" step="1" placeholder="Auto" />
             </div>
           </div>
-          <div class="form-group-checkbox">
-            <label>
-              <input type="checkbox" id="prod-form-available" checked />
-              <span>Available for wholesale order (Uncheck for "Coming Soon")</span>
-            </label>
+          <div class="form-group">
+            <label for="prod-form-status">Product Status *</label>
+            <select id="prod-form-status" class="form-control">
+              <option value="in_stock">In Stock</option>
+              <option value="out_of_stock">Out of Stock</option>
+              <option value="coming_soon">Coming Soon</option>
+            </select>
+            <small class="form-hint">Status controls ordering only; it never changes the wholesale rate.</small>
           </div>
           <div id="prod-form-error" class="form-error-msg" style="display:none;"></div>
           <div class="form-actions-row">
@@ -340,11 +343,13 @@ function renderProductsTab(contentEl, rootContainer) {
     products = products.filter(p => p.categoryId === selectedCategoryFilter || p.category === selectedCategoryFilter);
   }
 
-  // Apply availability filter
-  if (statusFilter === 'available') {
-    products = products.filter(p => p.available !== false && p.rate !== null);
+  // Apply product status filter
+  if (statusFilter === 'in-stock') {
+    products = products.filter(p => p.status === 'in_stock');
+  } else if (statusFilter === 'out-of-stock') {
+    products = products.filter(p => p.status === 'out_of_stock');
   } else if (statusFilter === 'coming-soon') {
-    products = products.filter(p => p.available === false || p.rate === null);
+    products = products.filter(p => p.status === 'coming_soon');
   }
 
   // Apply search query
@@ -392,7 +397,8 @@ function renderProductsTab(contentEl, rootContainer) {
 
         <select id="admin-status-filter" class="form-control select-compact">
           <option value="all" ${statusFilter === 'all' ? 'selected' : ''}>All Statuses</option>
-          <option value="available" ${statusFilter === 'available' ? 'selected' : ''}>Available</option>
+          <option value="in-stock" ${statusFilter === 'in-stock' ? 'selected' : ''}>In Stock</option>
+          <option value="out-of-stock" ${statusFilter === 'out-of-stock' ? 'selected' : ''}>Out of Stock</option>
           <option value="coming-soon" ${statusFilter === 'coming-soon' ? 'selected' : ''}>Coming Soon</option>
         </select>
       </div>
@@ -406,18 +412,21 @@ function renderProductsTab(contentEl, rootContainer) {
         </div>
       ` : products.map(prod => {
         const cat = getCategoryById(prod.categoryId || prod.category);
-        const isAvail = prod.available !== false && prod.rate !== null;
+        const productStatus = prod.status || 'in_stock';
+        const isInStock = productStatus === 'in_stock';
+        const isOutOfStock = productStatus === 'out_of_stock';
+        const statusLabel = isInStock ? 'In Stock' : (isOutOfStock ? 'Out of Stock' : 'Coming Soon');
         return `
-          <div class="admin-product-card ${isAvail ? '' : 'is-coming-soon'}">
+          <div class="admin-product-card ${productStatus === 'coming_soon' ? 'is-coming-soon' : ''} ${isOutOfStock ? 'is-out-of-stock' : ''}">
             <div class="prod-card-top">
               <div class="prod-model-title-wrap">
                 <span class="model-badge">${escapeHtml(prod.modelNumber)}</span>
                 <span class="admin-cat-pill">${cat ? escapeHtml(cat.name) : (prod.categoryId || 'General')}</span>
               </div>
               <div class="prod-rate-wrap">
-                ${isAvail 
+                ${prod.rate !== null && prod.rate !== undefined
                   ? `<span class="admin-prod-rate">${formatCurrency(prod.rate)}</span>` 
-                  : `<span class="rate-coming-soon">COMING SOON</span>`
+                  : `<span class="rate-coming-soon">${statusLabel.toUpperCase()}</span>`
                 }
               </div>
             </div>
@@ -433,11 +442,12 @@ function renderProductsTab(contentEl, rootContainer) {
               <div class="prod-action-btns">
                 <button 
                   type="button" 
-                  class="btn-status-toggle ${isAvail ? 'status-active' : 'status-pending'}" 
+                  class="btn-status-toggle ${isInStock ? 'status-active' : (isOutOfStock ? 'status-out-of-stock' : 'status-pending')}"
                   data-action="toggle-prod" 
                   data-id="${prod.id}"
+                  title="Click to cycle product status"
                 >
-                  ${isAvail ? 'Available' : 'Coming Soon'}
+                  ${statusLabel}
                 </button>
                 <button type="button" class="btn-admin-icon" data-action="edit-prod" data-id="${prod.id}" title="Edit Product">
                   ${ICONS.edit}
@@ -486,7 +496,12 @@ function renderProductsTab(contentEl, rootContainer) {
       const prodId = btn.getAttribute('data-id');
       const prod = getProductById(prodId);
       if (prod) {
-        updateProduct(prodId, { available: !prod.available });
+        const nextStatus = prod.status === 'in_stock'
+          ? 'out_of_stock'
+          : prod.status === 'out_of_stock'
+            ? 'coming_soon'
+            : 'in_stock';
+        updateProduct(prodId, { status: nextStatus });
       }
     });
   });
@@ -740,14 +755,14 @@ function attachProductEditorListeners(container) {
       const variant = form.querySelector('#prod-form-variant').value.trim();
       const description = form.querySelector('#prod-form-desc').value.trim();
       const rateVal = form.querySelector('#prod-form-rate').value;
-      const isAvailable = form.querySelector('#prod-form-available').checked;
+      const status = form.querySelector('#prod-form-status').value;
       const sortVal = form.querySelector('#prod-form-sort').value;
 
       if (!categoryId) throw new Error('Category is required');
       if (!modelNumber) throw new Error('Model Number is required');
       if (!productName) throw new Error('Product Name is required');
-      if (isAvailable && (!rateVal || isNaN(rateVal) || Number(rateVal) < 0)) {
-        throw new Error('Wholesale Rate is required for available products');
+      if (status === 'in_stock' && (!rateVal || isNaN(rateVal) || Number(rateVal) < 0)) {
+        throw new Error('Wholesale Rate is required for In Stock products');
       }
 
       const payload = {
@@ -756,8 +771,8 @@ function attachProductEditorListeners(container) {
         productName,
         variant,
         description: description || variant || productName,
-        rate: isAvailable ? Number(rateVal) : null,
-        available: isAvailable,
+        rate: rateVal === '' ? null : Number(rateVal),
+        status,
         sortOrder: sortVal ? Number(sortVal) : undefined
       };
 
@@ -807,11 +822,11 @@ function openProductEditor(container, productId = null) {
     form.querySelector('#prod-form-desc').value = prod.description || '';
     form.querySelector('#prod-form-rate').value = (prod.rate !== null && prod.rate !== undefined) ? prod.rate : '';
     form.querySelector('#prod-form-sort').value = prod.sortOrder || 1;
-    form.querySelector('#prod-form-available').checked = prod.available !== false && prod.rate !== null;
+    form.querySelector('#prod-form-status').value = prod.status || 'in_stock';
   } else {
     titleEl.textContent = 'Add Product';
     form.reset();
-    form.querySelector('#prod-form-available').checked = true;
+    form.querySelector('#prod-form-status').value = 'in_stock';
     if (selectedCategoryFilter !== 'all') {
       catSelect.value = selectedCategoryFilter;
     }

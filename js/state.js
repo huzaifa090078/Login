@@ -73,8 +73,8 @@ export function getQuantity(productId) {
 export function setQuantity(productId, quantity) {
   const product = getProductById(productId);
   
-  // Rule: Products marked "COMING SOON" or unavailable must NOT be selectable in the order
-  if (product && (product.available === false || product.active === false || product.isComingSoon || product.rate === null || typeof product.rate !== 'number')) {
+  // Rule: Only products explicitly marked In Stock can be selected in the order
+  if (product && product.status !== 'in_stock') {
     return;
   }
 
@@ -89,7 +89,7 @@ export function setQuantity(productId, quantity) {
 
 export function incrementQuantity(productId) {
   const product = getProductById(productId);
-  if (product && (product.available === false || product.active === false || product.isComingSoon || product.rate === null)) {
+  if (product && product.status !== 'in_stock') {
     return;
   }
   const current = getQuantity(productId);

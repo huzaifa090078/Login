@@ -5,27 +5,33 @@
  * - Model Number
  * - Product Name
  * - Description / Variant (prominent for duplicate model distinction)
- * - Wholesale Rate (PKR) or Coming Soon indicator
- * - Quantity controls [-] [0] [+] (disabled for Coming Soon)
+ * - Wholesale Rate (PKR) or availability status indicator
+ * - Quantity controls [-] [0] [+] (disabled when not In Stock)
  */
 
 import { getQuantity, incrementQuantity, decrementQuantity, setQuantity, formatCurrency } from '../state.js';
 import { ICONS } from '../icons.js';
 
 export function createProductCardElement(product) {
-  const isComingSoon = product.available === false || product.isComingSoon || product.rate === null || product.active === false;
-  const quantity = isComingSoon ? 0 : getQuantity(product.id);
+  const status = product.status || 'in_stock';
+  const isInStock = status === 'in_stock';
+  const isComingSoon = status === 'coming_soon';
+  const isOutOfStock = status === 'out_of_stock';
+  const isUnavailable = !isInStock;
+  const quantity = isInStock ? getQuantity(product.id) : 0;
   const card = document.createElement('div');
   
-  card.className = `product-card ${quantity > 0 ? 'has-quantity' : ''} ${isComingSoon ? 'coming-soon-card' : ''}`;
+  card.className = `product-card ${quantity > 0 ? 'has-quantity' : ''} ${isComingSoon ? 'coming-soon-card' : ''} ${isOutOfStock ? 'out-of-stock-card' : ''}`;
   card.id = `product-card-${product.id}`;
 
-  const rateMarkup = isComingSoon
-    ? `<div class="rate-coming-soon">COMING SOON</div>`
-    : `<div class="rate-value">${formatCurrency(product.rate)}</div>`;
+  const rateMarkup = isInStock
+    ? `<div class="rate-value">${formatCurrency(product.rate)}</div>`
+    : isOutOfStock
+      ? `<div class="rate-out-of-stock">OUT OF STOCK</div>`
+      : `<div class="rate-coming-soon">COMING SOON</div>`;
 
-  const stepperMarkup = isComingSoon
-    ? `<div class="stepper-unavailable"><span>Unavailable</span></div>`
+  const stepperMarkup = isUnavailable
+    ? `<div class="stepper-unavailable"><span>${isOutOfStock ? 'Out of Stock' : 'Coming Soon'}</span></div>`
     : `
       <div class="qty-stepper">
         <button 
@@ -73,7 +79,7 @@ export function createProductCardElement(product) {
     </div>
   `;
 
-  if (!isComingSoon) {
+  if (isInStock) {
     const minusBtn = card.querySelector('.btn-minus');
     const plusBtn = card.querySelector('.btn-plus');
     const input = card.querySelector('.qty-input');

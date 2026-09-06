@@ -618,6 +618,12 @@ body {
   border: 1px dashed var(--login-gray-300);
 }
 
+.product-card.out-of-stock-card {
+  opacity: 0.82;
+  background-color: #FFF8F8;
+  border: 1px dashed #FECACA;
+}
+
 .card-top-row {
   display: flex;
   align-items: center;
@@ -717,6 +723,18 @@ body {
   color: #B45309;
   background-color: #FEF3C7;
   border: 1px solid #FDE68A;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  letter-spacing: 0.4px;
+}
+
+.rate-out-of-stock {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #B91C1C;
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
   padding: 3px 7px;
   border-radius: var(--radius-sm);
   display: inline-block;
@@ -1943,6 +1961,12 @@ body {
   border-color: #FDE68A;
 }
 
+.btn-status-toggle.status-out-of-stock {
+  background-color: #FEF2F2;
+  color: #B91C1C;
+  border-color: #FECACA;
+}
+
 .btn-admin-icon {
   width: 28px;
   height: 28px;
@@ -2006,6 +2030,11 @@ body {
 .admin-product-card.is-coming-soon {
   background-color: #FFFDF7;
   border-color: #FDE68A;
+}
+
+.admin-product-card.is-out-of-stock {
+  background-color: #FFF8F8;
+  border-color: #FECACA;
 }
 
 .prod-card-top {

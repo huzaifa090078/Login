@@ -47,8 +47,33 @@ export function slugify(text) {
 /**
  * Normalize product to maintain 100% backwards compatibility
  */
+const PRODUCT_STATUSES = ['in_stock', 'out_of_stock', 'coming_soon'];
+
+function normalizeProductStatus(status) {
+  return PRODUCT_STATUSES.includes(status) ? status : null;
+}
+
+export function getProductStatus(product) {
+  if (product && normalizeProductStatus(product.status)) {
+    return product.status;
+  }
+  if (product?.isComingSoon === true || product?.available === false || product?.active === false || product?.rate === null) {
+    return 'coming_soon';
+  }
+  return 'in_stock';
+}
+
+export function isProductOrderable(product) {
+  return getProductStatus(product) === 'in_stock';
+}
+
 function normalizeProduct(p, index = 0) {
-  const isAvailable = p.available !== false && p.active !== false && p.rate !== null && !p.isComingSoon;
+  const explicitStatus = normalizeProductStatus(p.status);
+  const status = explicitStatus || (
+    p.isComingSoon === true || p.available === false || p.active === false || p.rate === null
+      ? 'coming_soon'
+      : 'in_stock'
+  );
   const catId = p.categoryId || p.category || 'chargers';
   const pName = p.productName || p.name || 'Product';
   const model = p.modelNumber || 'Model';
@@ -66,9 +91,10 @@ function normalizeProduct(p, index = 0) {
     variant: variant,
     description: desc,
     rate: rateVal,
-    available: isAvailable,
-    active: isAvailable, // Backwards compatibility alias
-    isComingSoon: !isAvailable || rateVal === null,
+    status,
+    available: status === 'in_stock',
+    active: status === 'in_stock', // Backwards compatibility alias
+    isComingSoon: status === 'coming_soon',
     sortOrder: typeof p.sortOrder === 'number' ? p.sortOrder : (index + 1)
   };
 }
@@ -218,7 +244,7 @@ export function deleteCategory(categoryId) {
 export function getAllProducts(includeUnavailable = true) {
   const prods = [...currentProducts];
   prods.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  return includeUnavailable ? prods : prods.filter(p => p.available !== false);
+  return includeUnavailable ? prods : prods.filter(isProductOrderable);
 }
 
 export function getActiveProducts() {
@@ -231,7 +257,7 @@ export function getProductsByCategory(categoryId, includeUnavailable = true) {
   }
   const filtered = currentProducts.filter(p => p.categoryId === categoryId || p.category === categoryId);
   filtered.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-  return includeUnavailable ? filtered : filtered.filter(p => p.available !== false);
+  return includeUnavailable ? filtered : filtered.filter(isProductOrderable);
 }
 
 export function getProductById(productId) {
@@ -264,7 +290,8 @@ export function addProduct(productData) {
   const model = (productData.modelNumber || '').trim();
   const name = (productData.productName || productData.name || '').trim();
   const catId = productData.categoryId || productData.category;
-  const isAvailable = productData.available !== false;
+  const status = normalizeProductStatus(productData.status)
+    || (productData.available === false ? 'coming_soon' : 'in_stock');
   const rateVal = (productData.rate !== null && productData.rate !== undefined && productData.rate !== '')
     ? Number(productData.rate)
     : null;
@@ -278,8 +305,8 @@ export function addProduct(productData) {
   if (!name) {
     throw new Error('Product Name is required');
   }
-  if (isAvailable && (rateVal === null || isNaN(rateVal) || rateVal < 0)) {
-    throw new Error('Wholesale Rate must be a valid positive number');
+  if (status === 'in_stock' && (rateVal === null || isNaN(rateVal) || rateVal < 0)) {
+    throw new Error('Wholesale Rate must be a valid number for In Stock products');
   }
 
   const variant = (productData.variant || '').trim();
@@ -308,8 +335,8 @@ export function addProduct(productData) {
     productName: name,
     variant: variant,
     description: desc,
-    rate: isAvailable ? rateVal : null,
-    available: isAvailable,
+    rate: rateVal,
+    status,
     sortOrder: nextSortOrder
   }, currentProducts.length);
 
@@ -326,20 +353,23 @@ export function updateProduct(productId, updates) {
   }
 
   const existing = currentProducts[index];
-  const isAvailable = updates.available !== undefined ? updates.available : existing.available;
+  const status = normalizeProductStatus(updates.status)
+    || getProductStatus(existing);
   let rateVal = updates.rate !== undefined ? updates.rate : existing.rate;
   if (rateVal !== null && rateVal !== undefined && rateVal !== '') {
     rateVal = Number(rateVal);
-  } else {
-    rateVal = null;
+  }
+
+  if (status === 'in_stock' && (rateVal === null || rateVal === undefined || isNaN(rateVal) || rateVal < 0)) {
+    throw new Error('Wholesale Rate must be a valid number for In Stock products');
   }
 
   const updated = normalizeProduct({
     ...existing,
     ...updates,
     id: existing.id, // ID remains permanently stable
-    rate: isAvailable ? rateVal : null,
-    available: isAvailable
+    rate: rateVal,
+    status
   }, index);
 
   currentProducts[index] = updated;
@@ -350,7 +380,7 @@ export function updateProduct(productId, updates) {
 
 export function deleteProduct(productId) {
   // Soft disable is preferred
-  return updateProduct(productId, { available: false });
+  return updateProduct(productId, { status: 'out_of_stock' });
 }
 
 // ==========================================
