@@ -39,6 +39,9 @@ function notify(eventType, payload) {
 
 // Forward catalog changes to state listeners
 subscribeCatalog((eventType, payload) => {
+  if (eventType === 'product_deleted' && payload?.id) {
+    delete state.cart[payload.id];
+  }
   notify('catalog_updated', { eventType, payload });
 });
 

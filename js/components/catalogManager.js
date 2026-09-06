@@ -452,6 +452,9 @@ function renderProductsTab(contentEl, rootContainer) {
                 <button type="button" class="btn-admin-icon" data-action="edit-prod" data-id="${prod.id}" title="Edit Product">
                   ${ICONS.edit}
                 </button>
+                <button type="button" class="btn-admin-icon btn-admin-delete" data-action="delete-prod" data-id="${prod.id}" title="Permanently Delete Product" aria-label="Permanently delete ${escapeHtml(prod.productName || prod.name)}">
+                  ${ICONS.trash}
+                </button>
               </div>
             </div>
           </div>
@@ -502,6 +505,27 @@ function renderProductsTab(contentEl, rootContainer) {
             ? 'coming_soon'
             : 'in_stock';
         updateProduct(prodId, { status: nextStatus });
+      }
+    });
+  });
+
+  contentEl.querySelectorAll('[data-action="delete-prod"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prodId = btn.getAttribute('data-id');
+      const prod = getProductById(prodId);
+      if (!prod) return;
+
+      const productLabel = `${prod.modelNumber} — ${prod.productName || prod.name}`;
+      const confirmed = window.confirm(
+        `Permanently delete "${productLabel}"?\n\nThis product will be removed from the catalog and cannot be restored unless you import a backup.`
+      );
+      if (!confirmed) return;
+
+      try {
+        deleteProduct(prodId);
+        renderProductsTab(contentEl, rootContainer);
+      } catch (error) {
+        window.alert(error.message || 'Product could not be deleted.');
       }
     });
   });

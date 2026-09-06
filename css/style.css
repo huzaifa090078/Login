@@ -1987,6 +1987,12 @@ body {
   border-color: var(--login-yellow);
 }
 
+.btn-admin-icon.btn-admin-delete:hover {
+  background-color: #FEE2E2;
+  color: #B91C1C;
+  border-color: #FCA5A5;
+}
+
 /* Products Admin List */
 .products-filter-row {
   display: flex;

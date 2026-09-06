@@ -379,8 +379,15 @@ export function updateProduct(productId, updates) {
 }
 
 export function deleteProduct(productId) {
-  // Soft disable is preferred
-  return updateProduct(productId, { status: 'out_of_stock' });
+  const index = currentProducts.findIndex(p => p.id === productId);
+  if (index === -1) {
+    throw new Error(`Product not found: ${productId}`);
+  }
+
+  const [deletedProduct] = currentProducts.splice(index, 1);
+  persistCatalog();
+  notifyListeners('product_deleted', deletedProduct);
+  return deletedProduct;
 }
 
 // ==========================================
