@@ -36,6 +36,7 @@ let statusFilter = 'all'; // 'all' | 'in-stock' | 'out-of-stock' | 'coming-soon'
 // Editing state
 let editingCategoryId = null; // null for add mode
 let editingProductId = null; // null for add mode
+let pendingDeleteProductId = null;
 
 export function renderCatalogManagerModal(container) {
   container.innerHTML = `
@@ -172,6 +173,24 @@ export function renderCatalogManagerModal(container) {
         </form>
       </div>
     </div>
+
+    <!-- Permanent Product Delete Confirmation -->
+    <div class="modal-backdrop modal-sub-dialog" id="product-delete-confirm-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="product-delete-confirm-title">
+      <div class="modal-card modal-card-dialog delete-confirm-card">
+        <div class="modal-header">
+          <h4 class="modal-title" id="product-delete-confirm-title">Delete Product?</h4>
+          <button type="button" class="modal-close-btn" id="product-delete-confirm-close" aria-label="Cancel product deletion">${ICONS.close}</button>
+        </div>
+        <div class="modal-body delete-confirm-body">
+          <p class="delete-confirm-question">Are you really sure you want to delete this item?</p>
+          <p class="delete-confirm-product" id="product-delete-confirm-name"></p>
+        </div>
+        <div class="form-actions-row delete-confirm-actions">
+          <button type="button" class="btn-secondary" id="product-delete-confirm-cancel">No, Cancel</button>
+          <button type="button" class="btn-danger" id="product-delete-confirm-yes">Yes, Delete</button>
+        </div>
+      </div>
+    </div>
   `;
 
   // Attach core modal controls
@@ -205,6 +224,7 @@ export function renderCatalogManagerModal(container) {
   // Attach Sub-modal listeners (Category Editor & Product Editor)
   attachCategoryEditorListeners(container);
   attachProductEditorListeners(container);
+  attachDeleteConfirmationListeners(container);
 
   // Re-render when catalog changes
   subscribeCatalog(() => {
@@ -514,20 +534,60 @@ function renderProductsTab(contentEl, rootContainer) {
       const prodId = btn.getAttribute('data-id');
       const prod = getProductById(prodId);
       if (!prod) return;
-
-      const productLabel = `${prod.modelNumber} — ${prod.productName || prod.name}`;
-      const confirmed = window.confirm(
-        `Permanently delete "${productLabel}"?\n\nThis product will be removed from the catalog and cannot be restored unless you import a backup.`
-      );
-      if (!confirmed) return;
-
-      try {
-        deleteProduct(prodId);
-        renderProductsTab(contentEl, rootContainer);
-      } catch (error) {
-        window.alert(error.message || 'Product could not be deleted.');
-      }
+      openDeleteConfirmation(rootContainer, prodId);
     });
+  });
+}
+
+function openDeleteConfirmation(container, productId) {
+  const modal = container.querySelector('#product-delete-confirm-modal');
+  const product = getProductById(productId);
+  if (!modal || !product) return;
+
+  pendingDeleteProductId = productId;
+  const productName = modal.querySelector('#product-delete-confirm-name');
+  if (productName) {
+    productName.textContent = `${product.modelNumber} — ${product.productName || product.name}`;
+  }
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  modal.querySelector('#product-delete-confirm-cancel')?.focus();
+}
+
+function attachDeleteConfirmationListeners(container) {
+  const modal = container.querySelector('#product-delete-confirm-modal');
+  if (!modal) return;
+
+  const closeConfirmation = () => {
+    pendingDeleteProductId = null;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  };
+
+  modal.querySelector('#product-delete-confirm-close')?.addEventListener('click', closeConfirmation);
+  modal.querySelector('#product-delete-confirm-cancel')?.addEventListener('click', closeConfirmation);
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeConfirmation();
+  });
+
+  modal.querySelector('#product-delete-confirm-yes')?.addEventListener('click', () => {
+    const productId = pendingDeleteProductId;
+    if (!productId) return;
+
+    closeConfirmation();
+    try {
+      deleteProduct(productId);
+    } catch (error) {
+      window.alert(error.message || 'Product could not be deleted.');
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal.classList.contains('open')) {
+      closeConfirmation();
+    }
   });
 }
 

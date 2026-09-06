@@ -1,0 +1,51 @@
+Modify the existing delete functionality without changing the current UI design or other functionality.
+
+I want a confirmation step before ANY product/item is permanently deleted.
+
+### Required behavior
+
+When I click the existing **Delete** button:
+
+1. Do NOT delete the item immediately.
+2. First show a confirmation dialog/modal asking:
+
+**"Are you really sure you want to delete this item?"**
+
+3. The dialog must have two clear options:
+
+* **Yes, Delete**
+* **No, Cancel**
+
+4. If I click **Yes, Delete**:
+
+   * Delete the item exactly as the current delete functionality does.
+   * Update the existing product/catalog state correctly.
+   * Preserve all other products and data.
+
+5. If I click **No, Cancel**:
+
+   * Close the confirmation dialog.
+   * Do NOT delete anything.
+   * Do NOT modify the product, price, stock, or any other data.
+
+### Important
+
+* The confirmation must appear EVERY TIME before an item is deleted.
+* There must be no way for a normal accidental click on Delete to immediately remove an item.
+* Do not change the existing delete logic unnecessarily; simply add the confirmation step before the actual deletion.
+* Do not create duplicate delete buttons.
+* Preserve the existing UI styling and make the confirmation dialog visually consistent with the current application.
+* Make the dialog responsive on mobile as well.
+* Make sure clicking outside the dialog or pressing Escape behaves safely and does NOT delete the item.
+* Only the explicit **Yes, Delete** action should perform the deletion.
+
+### Test before finishing
+
+Test these cases:
+
+1. Click Delete → confirmation appears → click No → item remains.
+2. Click Delete → confirmation appears → click outside/Escape → item remains.
+3. Click Delete → confirmation appears → click Yes, Delete → item is deleted.
+4. Refresh the application and verify the deletion state is correctly preserved according to the existing storage/state system.
+
+Do not modify any unrelated functionality.

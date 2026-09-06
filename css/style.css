@@ -1429,6 +1429,55 @@ body {
   background-color: var(--login-gray-300);
 }
 
+.btn-danger {
+  flex: 1;
+  background-color: #DC2626;
+  color: var(--login-white);
+  border: none;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-danger:hover {
+  background-color: #B91C1C;
+}
+
+.delete-confirm-card {
+  max-width: 420px;
+}
+
+.delete-confirm-body {
+  padding-bottom: 14px;
+}
+
+.delete-confirm-question {
+  margin: 0;
+  color: var(--login-black);
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.delete-confirm-product {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  color: var(--login-gray-700);
+  background-color: var(--login-gray-50);
+  border: 1px solid var(--login-gray-200);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.delete-confirm-actions {
+  padding: 0 16px 16px;
+}
+
 .btn-modal-send {
   flex: 1.5;
   justify-content: center;
