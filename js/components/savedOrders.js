@@ -149,7 +149,7 @@ export function populateOrdersList(container) {
         <div class="order-card-customer">
           <div><strong>Shop:</strong> ${escapeHtml(order.shopName)}</div>
           <div><strong>Customer:</strong> ${escapeHtml(order.customerName)}</div>
-          ${order.phone ? `<div><strong>Phone:</strong> ${escapeHtml(order.phone)}</div>` : ''}
+          ${order.phone ? `<div><strong>Customer Number:</strong> ${escapeHtml(order.phone)}</div>` : ''}
           <div><strong>Address:</strong> ${escapeHtml(order.address)}</div>
         </div>
 
@@ -257,7 +257,7 @@ export function generateSavedOrderWhatsAppMessage(order) {
   msg += `Shop Name: ${shopName}\n`;
   msg += `Customer Name: ${customerName}\n`;
   if (phone) {
-    msg += `Phone: ${phone}\n`;
+    msg += `Customer Number: ${phone}\n`;
   }
   msg += `Address: ${address}\n`;
   msg += `${divider}\n`;

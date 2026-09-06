@@ -293,7 +293,7 @@ export function generateWhatsAppMessage(customState = state) {
   msg += `Shop Name: ${shopName}\n`;
   msg += `Customer Name: ${customerName}\n`;
   if (phone) {
-    msg += `Phone: ${phone}\n`;
+    msg += `Customer Number: ${phone}\n`;
   }
   msg += `Address: ${address}\n`;
   msg += `${divider}\n`;

@@ -84,15 +84,17 @@ export function renderHeader(container) {
         </div>
 
         <div class="form-group">
-          <label for="input-customer-phone">Phone Number *</label>
+          <label for="input-customer-phone">Customer Number *</label>
           <input 
             type="tel" 
-            inputmode="tel"
+            inputmode="numeric"
             id="input-customer-phone" 
             class="form-control" 
-            placeholder="03XX XXXXXXX" 
+            placeholder="Customer Number" 
             value="${escapeHtml(phone)}"
+            aria-describedby="customer-phone-error"
           />
+          <p class="field-inline-error" id="customer-phone-error" role="alert" aria-live="polite"></p>
         </div>
 
         <div class="form-group full-width">
@@ -136,6 +138,11 @@ export function renderHeader(container) {
   });
   customerPhoneInput.addEventListener('input', (e) => {
     e.target.classList.remove('input-error');
+    const error = container.querySelector('#customer-phone-error');
+    if (error) {
+      error.textContent = '';
+      error.classList.remove('visible');
+    }
     updateCustomerInfo('phone', e.target.value);
   });
   dateInput.addEventListener('change', (e) => updateCustomerInfo('date', e.target.value));

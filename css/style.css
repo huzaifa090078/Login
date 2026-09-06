@@ -321,6 +321,18 @@ body {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
+.field-inline-error {
+  display: none;
+  margin-top: 3px;
+  color: #DC2626;
+  font-size: 0.70rem;
+  line-height: 1.25;
+}
+
+.field-inline-error.visible {
+  display: block;
+}
+
 /* 6. Global Search Bar */
 .search-section {
   padding: 8px var(--space-lg);

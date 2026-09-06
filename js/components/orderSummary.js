@@ -206,7 +206,7 @@ export function renderOrderSummary(container) {
       summaryBox.innerHTML = `
         <div class="offline-summary-row"><span>Shop:</span> <strong>${escapeHtml(savedOrder.shopName)}</strong></div>
         <div class="offline-summary-row"><span>Customer:</span> <strong>${escapeHtml(savedOrder.customerName)}</strong></div>
-        <div class="offline-summary-row"><span>Phone:</span> <strong>${escapeHtml(savedOrder.phone || '-')}</strong></div>
+        <div class="offline-summary-row"><span>Customer Number:</span> <strong>${escapeHtml(savedOrder.phone || '-')}</strong></div>
         <div class="offline-summary-row"><span>Items:</span> <strong>${savedOrder.totalItems} Units</strong></div>
         <div class="offline-summary-row"><span>Grand Total:</span> <strong>${formatCurrency(savedOrder.grandTotal)}</strong></div>
       `;
@@ -365,10 +365,21 @@ function highlightMissingCustomerFields() {
   }
 
   if (customerPhoneInput) {
+    const phoneError = document.getElementById('customer-phone-error');
     if (!state.customerInfo.phone || !state.customerInfo.phone.trim() || !isValidPakistaniPhoneNumber(state.customerInfo.phone)) {
       customerPhoneInput.classList.add('input-error');
+      if (phoneError) {
+        phoneError.textContent = !state.customerInfo.phone || !state.customerInfo.phone.trim()
+          ? 'Customer Number is required.'
+          : 'Enter a valid Pakistani mobile number (e.g. 03001234567).';
+        phoneError.classList.add('visible');
+      }
     } else {
       customerPhoneInput.classList.remove('input-error');
+      if (phoneError) {
+        phoneError.textContent = '';
+        phoneError.classList.remove('visible');
+      }
     }
   }
 
@@ -424,7 +435,7 @@ function populateModalContent(container) {
           <span class="field-val">${escapeHtml(state.customerInfo.customerName) || '<em style="color:#d9534f">Missing</em>'}</span>
         </div>
         <div>
-          <span class="field-lbl">Phone:</span>
+          <span class="field-lbl">Customer Number:</span>
           <span class="field-val">${escapeHtml(normalizePakistaniPhoneNumber(state.customerInfo.phone)) || '<em style="color:#d9534f">Missing</em>'}</span>
         </div>
         <div>

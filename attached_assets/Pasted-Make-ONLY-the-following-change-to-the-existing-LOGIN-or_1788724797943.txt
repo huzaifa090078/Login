@@ -1,0 +1,171 @@
+Make ONLY the following change to the existing LOGIN order form.
+
+IMPORTANT:
+- Do not redesign the UI.
+- Do not change the existing color scheme.
+- Do not change product catalog, categories, search, quantity controls, calculations, or WhatsApp functionality except where required to include the new customer phone number.
+- Do not break any existing functionality.
+- Keep the current layout and styling consistent with the existing form.
+
+CHANGE REQUIRED:
+
+1. ADD CUSTOMER PHONE NUMBER FIELD
+
+In the existing Customer Details section, where these fields currently exist:
+
+- Shop Name
+- Customer Name
+- Address
+- Date
+
+Add a new field:
+
+- Customer Number
+
+Recommended placement:
+
+Shop Name
+Customer Name
+Customer Number
+Address
+Date
+
+The phone number field should match the existing input fields in:
+- height
+- border radius
+- border
+- typography
+- padding
+- focus state
+- responsive behavior
+
+Use a clean minimalist phone icon if the existing form uses icons.
+
+Placeholder:
+"Customer Number"
+
+Input type:
+tel
+
+Use mobile-friendly numeric keyboard behavior where appropriate.
+
+2. VALIDATION
+
+Customer Number should be required before an order can be submitted.
+
+Do not accept an empty number.
+
+Keep validation user-friendly.
+
+Show a clear inline validation message if the user tries to submit without entering the number.
+
+Do not make the validation unnecessarily restrictive because Pakistani customers may enter numbers in different formats.
+
+Accept common formats such as:
+
+03XXXXXXXXX
++923XXXXXXXXX
+923XXXXXXXXX
+
+Do not reject a valid Pakistani number simply because spaces or +92 are used.
+
+3. ORDER STATE
+
+Add customer phone number to the existing order/customer data model.
+
+Example:
+
+customer: {
+  shopName: "...",
+  customerName: "...",
+  phone: "...",
+  address: "...",
+  date: "..."
+}
+
+Use a clear field name such as:
+
+phone
+
+or
+
+customerPhone
+
+Keep the naming consistent with the existing project architecture.
+
+4. WHATSAPP INVOICE MESSAGE
+
+This is VERY IMPORTANT.
+
+When the order is sent through WhatsApp, include the customer's phone number in the invoice/order message.
+
+The message should show:
+
+Date: ...
+Shop Name: ...
+Customer Name: ...
+Customer Number: ...
+Address: ...
+
+Then the existing product/order details should appear exactly as they currently do.
+
+Example:
+
+━━━━━━━━━━━━━━━━━━
+LOGIN WHOLESALE ORDER
+━━━━━━━━━━━━━━━━━━
+
+Date: 06 Sep 2026
+Shop Name: ABC Mobile
+Customer Name: Ali
+Customer Number: 03001234567
+Address: Faisalabad
+
+CHARGERS
+L-400 ELVO Charger
+Variant: Micro
+Rate: Rs. 389
+Qty: 5
+Total: Rs. 1,945
+
+...
+
+Total Items: 5
+Grand Total: Rs. 1,945
+
+Do not change the existing invoice formatting unnecessarily. Simply add the Customer Number field in the appropriate customer-information section.
+
+5. WHATSAPP URL
+
+The customer number being displayed inside the invoice is the SHOP CUSTOMER'S NUMBER.
+
+Do NOT confuse it with the LOGIN WhatsApp recipient number.
+
+The existing centrally configured LOGIN WhatsApp recipient must remain unchanged.
+
+The new Customer Number field is ONLY customer information that appears in the order/invoice message.
+
+6. DATA PERSISTENCE
+
+If the current form saves unfinished orders or customer information locally for offline/PWA functionality, include the new phone field in that existing persistence mechanism as well.
+
+Do not break offline functionality.
+
+7. TESTING
+
+After implementing, test:
+
+- Customer Number field appears correctly.
+- User can enter a Pakistani phone number.
+- Empty number triggers validation.
+- Existing fields still work.
+- Order can be created when all required details are provided.
+- WhatsApp message contains Customer Number.
+- Existing product calculations remain unchanged.
+- Existing WhatsApp recipient remains unchanged.
+- Mobile layout remains clean and responsive.
+
+IMPORTANT:
+This is a SMALL targeted modification.
+Do not make unrelated changes to the project.
+First inspect the existing customer-details component and WhatsApp message generation logic, then modify only the necessary files.
