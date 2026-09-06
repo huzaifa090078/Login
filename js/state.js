@@ -187,6 +187,11 @@ export function formatDateForWhatsApp(isoDate) {
   return isoDate;
 }
 
+export function formatInvoiceDateForWhatsApp(isoDate) {
+  const formatted = formatDateForWhatsApp(isoDate);
+  return formatted.replace(/^(\d{2})-([A-Za-z]{3})-(\d{4})$/, '$1 $2 $3');
+}
+
 export function normalizePakistaniPhoneNumber(input) {
   if (!input || typeof input !== 'string') return '';
   let cleaned = input.trim().replace(/[\s\-_().]/g, '');
@@ -204,6 +209,42 @@ export function isValidPakistaniPhoneNumber(input) {
   if (!input) return false;
   const normalized = normalizePakistaniPhoneNumber(input);
   return /^03\d{9}$/.test(normalized);
+}
+
+const WHATSAPP_CATEGORY_EMOJIS = {
+  chargers: '🔌',
+  'data-cables': '🔌',
+  handsfree: '🎧',
+  'power-banks': '🔋',
+  'smart-watches': '⌚',
+  tws: '🎵',
+  'neckband-headphones': '🎧',
+  speakers: '🔊',
+  batteries: '🔋'
+};
+
+export function getWhatsAppCategoryEmoji(category) {
+  const categoryId = typeof category === 'string' ? category : category?.id;
+  return WHATSAPP_CATEGORY_EMOJIS[categoryId] || '📦';
+}
+
+export function formatWhatsAppProductLabel(item) {
+  const model = item.modelNumber ? String(item.modelNumber).trim() : '';
+  const productName = (item.productName || item.name || '').trim();
+  const baseLabel = [model, productName].filter(Boolean).join(' ').trim()
+    || item.description
+    || model
+    || 'Product';
+  const variant = item.variant ? String(item.variant).trim() : '';
+
+  if (!variant || baseLabel.toLowerCase().includes(variant.toLowerCase())) {
+    return baseLabel;
+  }
+  return `${baseLabel} — ${variant}`;
+}
+
+export function formatWhatsAppProductBlock(item) {
+  return `${formatWhatsAppProductLabel(item)}\n${formatCurrency(item.rate)} × ${item.quantity} = ${formatCurrency(item.lineTotal)}`;
 }
 
 export function validateOrder(customState = state) {
@@ -242,26 +283,26 @@ export function validateOrder(customState = state) {
 export function generateWhatsAppMessage(customState = state) {
   const divider = '━━━━━━━━━━━━━━━━━━━━';
   const customer = customState.customerInfo;
-  const dateStr = formatDateForWhatsApp(customer.date);
+  const dateStr = formatInvoiceDateForWhatsApp(customer.date);
 
-  let items = [];
+  let groupedItems = [];
   let totalItems = 0;
   let grandTotal = 0;
 
   if (customState === state) {
-    const grouped = getOrderSummaryGrouped();
-    items = grouped.flatMap(g => g.items);
+    groupedItems = getOrderSummaryGrouped();
     totalItems = getTotalItems();
     grandTotal = getGrandTotal();
   } else {
     const categories = getCategories();
     categories.forEach(cat => {
+      const categoryItems = [];
       Object.entries(customState.cart || {}).forEach(([productId, qty]) => {
         if (qty <= 0) return;
         const product = getProductById(productId);
         if (product && (product.categoryId === cat.id || product.category === cat.id)) {
           const lineTotal = product.rate * qty;
-          items.push({
+          categoryItems.push({
             productId: product.id,
             modelNumber: product.modelNumber,
             productName: product.productName || product.name,
@@ -275,6 +316,9 @@ export function generateWhatsAppMessage(customState = state) {
           grandTotal += lineTotal;
         }
       });
+      if (categoryItems.length > 0) {
+        groupedItems.push({ category: cat, items: categoryItems });
+      }
     });
   }
 
@@ -283,45 +327,40 @@ export function generateWhatsAppMessage(customState = state) {
   const phone = customer.phone ? normalizePakistaniPhoneNumber(customer.phone) : '';
   const address = customer.address ? customer.address.trim() : '';
 
-  // 1. Header Section
-  let msg = `${divider}\n`;
-  msg += `*LOGIN ORDER INVOICE*\n`;
-  msg += `Date: ${dateStr}\n`;
-  msg += `${divider}\n`;
-
-  // 2. Customer Information Section (concise lines)
-  msg += `Shop Name: ${shopName}\n`;
-  msg += `Customer Name: ${customerName}\n`;
-  if (phone) {
-    msg += `Customer Number: ${phone}\n`;
-  }
-  msg += `Address: ${address}\n`;
-  msg += `${divider}\n`;
-
-  // 3. Product Section: each item in a 2-line block (Model / Description, then Rate / Qty / Total)
-  const productBlocks = items.map(item => {
-    let desc = item.productName || item.name || '';
-    if (item.variant && !desc.toLowerCase().includes(item.variant.toLowerCase())) {
-      desc += ` - ${item.variant}`;
-    }
-    if (!desc) desc = item.description || item.modelNumber || '';
-    const line1 = `*${item.modelNumber}* / ${desc}`;
-    const line2 = `Rate: ${formatCurrency(item.rate)} / Qty: ${item.quantity} / Total: ${formatCurrency(item.lineTotal)}`;
-    return `${line1}\n${line2}`;
+  const categorySections = groupedItems.map(group => {
+    const categoryName = (group.category?.name || group.category?.id || 'Other Items').toUpperCase();
+    const productBlocks = group.items.map(formatWhatsAppProductBlock);
+    return `*${getWhatsAppCategoryEmoji(group.category)} ${categoryName}*\n\n${productBlocks.join('\n\n')}`;
   });
 
-  if (productBlocks.length > 0) {
-    msg += productBlocks.join('\n\n') + '\n';
-  }
-  msg += `${divider}\n`;
-
-  // 4. Totals Section & Thank You Line
-  msg += `Total Items: ${totalItems}\n`;
-  msg += `Grand Total: ${formatCurrency(grandTotal)}\n`;
-  msg += `${divider}\n`;
-  msg += `Thank you for your order!`;
-
-  return msg;
+  return [
+    divider,
+    '*LOGIN | WHOLESALE ORDER*',
+    divider,
+    '',
+    '*DATE*',
+    dateStr,
+    '',
+    '*CUSTOMER DETAILS*',
+    `Shop Name: ${shopName}`,
+    `Customer Name: ${customerName}`,
+    `Customer No.: ${phone}`,
+    `Address: ${address}`,
+    '',
+    divider,
+    '*ORDER DETAILS*',
+    '',
+    categorySections.join('\n\n'),
+    '',
+    divider,
+    '*ORDER TOTAL*',
+    `Total Items: ${totalItems}`,
+    `*Grand Total: ${formatCurrency(grandTotal)}*`,
+    '',
+    divider,
+    '*LOGIN WHOLESALE*',
+    'Thank you for your order.'
+  ].join('\n');
 }
 
 

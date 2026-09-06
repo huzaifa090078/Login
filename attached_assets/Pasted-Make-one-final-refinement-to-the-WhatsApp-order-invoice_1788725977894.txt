@@ -1,0 +1,321 @@
+Make one final refinement to the WhatsApp order/invoice message formatting.
+
+IMPORTANT:
+- Do NOT change the form UI.
+- Do NOT change product data.
+- Do NOT change calculations.
+- Do NOT change customer fields.
+- Do NOT change WhatsApp recipient.
+- Do NOT change order logic.
+- ONLY optimize the WhatsApp message formatting.
+
+The goal is a professional, compact, highly readable WhatsApp wholesale order message.
+
+==================================================
+1. CATEGORY HEADINGS — MUST BE BOLD
+==================================================
+
+Category names must be formatted using WhatsApp bold syntax:
+
+*🔌 CHARGERS*
+*🎧 HANDSFREE*
+*🔋 POWER BANKS*
+*🎵 SPEAKERS*
+*🔋 BATTERIES*
+
+The actual generated WhatsApp message must contain the *asterisks* so WhatsApp renders the category name in bold.
+
+Use ONE small relevant emoji before each category.
+
+Example:
+
+*🔌 CHARGERS*
+
+Do NOT use:
+- large decorative emoji
+- multiple emojis
+- emoji on every product
+- unnecessary symbols
+
+Categories should be the main visual separators in the order.
+
+==================================================
+2. PRODUCT FORMAT
+==================================================
+
+Keep model/product name and variant on the SAME LINE.
+
+Example:
+
+L-400 ELVO — Micro
+Rs. 389 × 5 = Rs. 1,945
+
+Another example:
+
+L-401 — Type-C
+Rs. 479 × 3 = Rs. 1,437
+
+If there is no variant:
+
+L-709 VOLTRA
+Rs. 2,799 × 2 = Rs. 5,598
+
+Never show:
+
+L-400 ELVO
+Micro
+
+The variant must be on the same line after "—".
+
+==================================================
+3. SPACING — OPTIMIZE CAREFULLY
+==================================================
+
+Do NOT use excessive blank lines.
+
+The current message should be compact enough that a large order does not become unnecessarily long.
+
+However, do NOT remove all spacing because then different products/categories become visually mixed together.
+
+Use a balanced spacing system:
+
+- 1 blank line between customer sections and order sections where appropriate.
+- 1 blank line after each category heading.
+- 1 blank line between product entries.
+- 1 blank line between categories.
+- No multiple consecutive blank lines.
+- Never use 2, 3, or more empty lines together.
+
+Example of the desired density:
+
+*🔌 CHARGERS*
+
+L-400 ELVO — Micro
+Rs. 389 × 5 = Rs. 1,945
+
+L-401 — Type-C
+Rs. 479 × 3 = Rs. 1,437
+
+*🎧 HANDSFREE*
+
+L-302 — Black
+Rs. 329 × 4 = Rs. 1,316
+
+*🔋 POWER BANKS*
+
+L-709 VOLTRA
+Rs. 2,799 × 2 = Rs. 5,598
+
+This is the ideal balance:
+NOT too spread out,
+NOT too compressed.
+
+==================================================
+4. CUSTOMER DETAILS
+==================================================
+
+Keep the customer details in the clean minimal style:
+
+━━━━━━━━━━━━━━━━━━━━
+*LOGIN | WHOLESALE ORDER*
+━━━━━━━━━━━━━━━━━━━━
+
+*DATE*
+06 Sep 2026
+
+*CUSTOMER DETAILS*
+Shop Name: Al-Madina Mobile
+Customer Name: Ahmed Ali
+Customer No.: 0300-1234567
+Address: D-Type Colony, Faisalabad
+
+━━━━━━━━━━━━━━━━━━━━
+
+Keep customer information compact.
+
+Do NOT put every customer field on separate large blocks.
+
+One field per line is enough.
+
+==================================================
+5. ORDER SECTION
+==================================================
+
+Use:
+
+*ORDER DETAILS*
+
+Then immediately start the categories.
+
+Do not add unnecessary explanatory text.
+
+Example:
+
+*ORDER DETAILS*
+
+*🔌 CHARGERS*
+
+L-400 ELVO — Micro
+Rs. 389 × 5 = Rs. 1,945
+
+L-401 — Type-C
+Rs. 479 × 3 = Rs. 1,437
+
+*🎧 HANDSFREE*
+
+L-302 — Black
+Rs. 329 × 4 = Rs. 1,316
+
+==================================================
+6. TOTAL / SUMMARY
+==================================================
+
+Make the total section clearly visible but compact.
+
+Use:
+
+━━━━━━━━━━━━━━━━━━━━
+*ORDER TOTAL*
+━━━━━━━━━━━━━━━━━━━━
+
+Total Items: 14
+*Grand Total: Rs. 10,296*
+
+━━━━━━━━━━━━━━━━━━━━
+*LOGIN WHOLESALE*
+━━━━━━━━━━━━━━━━━━━━
+
+Thank you for your order.
+
+The Grand Total should be bold using WhatsApp syntax.
+
+==================================================
+7. FINAL MESSAGE STYLE
+==================================================
+
+The complete message should approximately follow this structure:
+
+━━━━━━━━━━━━━━━━━━━━
+*LOGIN | WHOLESALE ORDER*
+━━━━━━━━━━━━━━━━━━━━
+
+*DATE*
+06 Sep 2026
+
+*CUSTOMER DETAILS*
+Shop Name: Al-Madina Mobile
+Customer Name: Ahmed Ali
+Customer No.: 0300-1234567
+Address: D-Type Colony, Faisalabad
+
+━━━━━━━━━━━━━━━━━━━━
+*ORDER DETAILS*
+
+*🔌 CHARGERS*
+
+L-400 ELVO — Micro
+Rs. 389 × 5 = Rs. 1,945
+
+L-401 — Type-C
+Rs. 479 × 3 = Rs. 1,437
+
+*🎧 HANDSFREE*
+
+L-302 — Black
+Rs. 329 × 4 = Rs. 1,316
+
+*🔋 POWER BANKS*
+
+L-709 VOLTRA
+Rs. 2,799 × 2 = Rs. 5,598
+
+━━━━━━━━━━━━━━━━━━━━
+*ORDER TOTAL*
+
+Total Items: 14
+*Grand Total: Rs. 10,296*
+
+━━━━━━━━━━━━━━━━━━━━
+*LOGIN WHOLESALE*
+
+Thank you for your order.
+
+==================================================
+8. WHATSAPP OPTIMIZATION RULES
+==================================================
+
+Optimize the message specifically for WhatsApp mobile viewing.
+
+Use:
+- WhatsApp bold syntax where appropriate
+- short lines
+- clear hierarchy
+- minimal separators
+- controlled whitespace
+- one emoji per category only
+
+Avoid:
+- excessive blank lines
+- excessive emojis
+- giant decorative separators
+- unnecessary product descriptions
+- unnecessary repeated information
+- long paragraphs
+- HTML
+- Markdown tables
+- complicated formatting that WhatsApp may render incorrectly
+
+The message should be easy to scan with one glance.
+
+==================================================
+9. DYNAMIC BEHAVIOR
+==================================================
+
+Everything must remain dynamic.
+
+Categories:
+- Only show categories containing selected products.
+- Category names should be bold.
+
+Products:
+- Model/product name + variant on same line.
+- Rate × quantity = line total.
+- Products with no variant should not show an empty "—".
+
+Totals:
+- Total Items = total quantity of all products.
+- Grand Total = sum of all line totals.
+
+Customer:
+- Always show Customer Number.
+- Use actual customer information from the form.
+
+Do not hardcode any example values.
+
+==================================================
+FINAL QUALITY TARGET
+==================================================
+
+The WhatsApp invoice should feel like a professional wholesale order confirmation.
+
+The visual hierarchy should be:
+
+LOGIN HEADER
+↓
+CUSTOMER DETAILS
+↓
+ORDER DETAILS
+↓
+BOLD CATEGORY
+↓
+PRODUCT + VARIANT
+↓
+RATE × QTY = TOTAL
+↓
+ORDER TOTAL
+↓
+GRAND TOTAL
+
+Keep it compact, but give enough breathing room so categories and products never visually merge together.
+
+This is a formatting refinement only. Preserve all existing functionality.

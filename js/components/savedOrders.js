@@ -17,8 +17,13 @@ import {
 import { 
   formatCurrency, 
   formatDateForWhatsApp, 
-  WHATSAPP_PHONE 
+  formatInvoiceDateForWhatsApp,
+  normalizePakistaniPhoneNumber,
+  WHATSAPP_PHONE,
+  getWhatsAppCategoryEmoji,
+  formatWhatsAppProductBlock
 } from '../state.js';
+import { getCategories, getProductById } from '../catalog-data.js';
 import { ICONS } from '../icons.js';
 
 let activeFilter = 'all'; // 'all' | 'pending' | 'sent'
@@ -240,52 +245,69 @@ function handleSendSavedOrder(orderId, container) {
 
 export function generateSavedOrderWhatsAppMessage(order) {
   const divider = '━━━━━━━━━━━━━━━━━━━━';
-  const dateStr = formatDateForWhatsApp(order.date);
+  const dateStr = formatInvoiceDateForWhatsApp(order.date);
 
   const shopName = order.shopName ? order.shopName.trim() : '';
   const customerName = order.customerName ? order.customerName.trim() : '';
-  const phone = order.phone ? order.phone.trim() : '';
+  const phone = order.phone ? normalizePakistaniPhoneNumber(order.phone) : '';
   const address = order.address ? order.address.trim() : '';
 
-  // 1. Header Section
-  let msg = `${divider}\n`;
-  msg += `*LOGIN ORDER INVOICE*\n`;
-  msg += `Date: ${dateStr}\n`;
-  msg += `${divider}\n`;
+  const categories = getCategories();
+  const groupedItems = categories.map(category => ({
+    category,
+    items: (order.items || []).filter(item => {
+      const product = getProductById(item.productId);
+      const categoryId = item.categoryId || product?.categoryId || product?.category;
+      return categoryId === category.id;
+    })
+  })).filter(group => group.items.length > 0);
 
-  // 2. Customer Information Section (concise lines)
-  msg += `Shop Name: ${shopName}\n`;
-  msg += `Customer Name: ${customerName}\n`;
-  if (phone) {
-    msg += `Customer Number: ${phone}\n`;
+  const uncategorizedItems = (order.items || []).filter(item => {
+    const product = getProductById(item.productId);
+    const categoryId = item.categoryId || product?.categoryId || product?.category;
+    return !categories.some(category => category.id === categoryId);
+  });
+  if (uncategorizedItems.length > 0) {
+    groupedItems.push({
+      category: { id: 'other', name: 'Other Items' },
+      items: uncategorizedItems
+    });
   }
-  msg += `Address: ${address}\n`;
-  msg += `${divider}\n`;
 
-  // 3. Product Section: each item in a 2-line block (Model / Description, then Rate / Qty / Total)
-  const productBlocks = (order.items || []).map(item => {
-    let desc = item.productName || item.name || '';
-    if (item.variant && !desc.toLowerCase().includes(item.variant.toLowerCase())) {
-      desc += ` - ${item.variant}`;
-    }
-    if (!desc) desc = item.description || item.modelNumber || '';
-    const line1 = `*${item.modelNumber}* / ${desc}`;
-    const line2 = `Rate: ${formatCurrency(item.rate)} / Qty: ${item.quantity} / Total: ${formatCurrency(item.lineTotal)}`;
-    return `${line1}\n${line2}`;
+  const categorySections = groupedItems.map(group => {
+    const categoryName = (group.category.name || group.category.id).toUpperCase();
+    const productBlocks = group.items.map(formatWhatsAppProductBlock);
+    return `*${getWhatsAppCategoryEmoji(group.category)} ${categoryName}*\n\n${productBlocks.join('\n\n')}`;
   });
 
-  if (productBlocks.length > 0) {
-    msg += productBlocks.join('\n\n') + '\n';
-  }
-  msg += `${divider}\n`;
-
-  // 4. Totals Section & Thank You Line
-  msg += `Total Items: ${order.totalItems}\n`;
-  msg += `Grand Total: ${formatCurrency(order.grandTotal)}\n`;
-  msg += `${divider}\n`;
-  msg += `Thank you for your order!`;
-
-  return msg;
+  return [
+    divider,
+    '*LOGIN | WHOLESALE ORDER*',
+    divider,
+    '',
+    '*DATE*',
+    dateStr,
+    '',
+    '*CUSTOMER DETAILS*',
+    `Shop Name: ${shopName}`,
+    `Customer Name: ${customerName}`,
+    `Customer No.: ${phone}`,
+    `Address: ${address}`,
+    '',
+    divider,
+    '*ORDER DETAILS*',
+    '',
+    categorySections.join('\n\n'),
+    '',
+    divider,
+    '*ORDER TOTAL*',
+    `Total Items: ${order.totalItems}`,
+    `*Grand Total: ${formatCurrency(order.grandTotal)}*`,
+    '',
+    divider,
+    '*LOGIN WHOLESALE*',
+    'Thank you for your order.'
+  ].join('\n');
 }
 
 function escapeHtml(str) {
