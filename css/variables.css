@@ -51,5 +51,11 @@
 
   /* Layout */
   --max-width: 540px; /* Mobile-first container max-width */
-  --bottom-bar-height: 76px;
+  --bottom-bar-height: 84px;
+
+  /* Mobile Safe Area Insets (Notch, Home Bar, Status Bar) */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
 }

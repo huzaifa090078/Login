@@ -206,22 +206,20 @@
 
       // 12. WhatsApp Message Generation
       const waMsg = generateWhatsAppMessage(testState);
-      assert('WhatsApp message contains header divider and title', waMsg.includes('━━━━━━━━━━━━━━━━━━━━\n*LOGIN ORDER INVOICE*\nDate: 05-Sep-2026\n━━━━━━━━━━━━━━━━━━━━'));
+      assert('WhatsApp message contains header divider and title', waMsg.includes('━━━━━━━━━━━━━━━━━━━━\n*LOGIN | WHOLESALE ORDER*\n━━━━━━━━━━━━━━━━━━━━'));
       assert('WhatsApp message contains Shop Name', waMsg.includes('Shop Name: ABC Mobiles'));
       assert('WhatsApp message contains Customer Name', waMsg.includes('Customer Name: Ali'));
-      assert('WhatsApp message contains Phone Number', waMsg.includes('Phone: 03001234567'));
+      assert('WhatsApp message contains Phone Number', waMsg.includes('Customer No.: 03001234567'));
       assert('WhatsApp message contains Address', waMsg.includes('Address: D-Ground, Faisalabad'));
-      assert('WhatsApp message contains Date 05-Sep-2026', waMsg.includes('Date: 05-Sep-2026'));
-      assert('WhatsApp message contains Model / Description format', waMsg.includes('*L-400* / ELVO Charger - Micro'));
-      assert('WhatsApp message contains Rate / Qty / Total format', waMsg.includes('Rate: Rs. 389 / Qty: 5 / Total: Rs. 1,945'));
-      assert('WhatsApp message contains Total Items: 10', waMsg.includes('Total Items: 10'), 'Message total items line: ' + (waMsg.match(/Total Items: .*/)||['none'])[0]);
-      assert('WhatsApp message contains Grand Total: Rs. 3,530', waMsg.includes('Grand Total: Rs. 3,530'), 'Message grand total line: ' + (waMsg.match(/Grand Total: .*/)||['none'])[0]);
-      assert('WhatsApp message contains thank you footer', waMsg.includes('Thank you for your order!'));
+      assert('WhatsApp message contains Date 05 Sep 2026', waMsg.includes('05 Sep 2026'));
+      assert('WhatsApp message contains Model / Description format', waMsg.includes('L-400 ELVO Charger | Micro | 5×389=1945'));
+      assert('WhatsApp message contains Total format', waMsg.includes('*TOTAL* 10 Items | *Rs. 3,530*'));
+      assert('WhatsApp message contains thank you footer', waMsg.includes('Thank you for your order.'));
 
       // 13. WhatsApp Deep Link URL
       const waUrl = getWhatsAppUrl(testState);
       assert('WhatsApp URL starts with https://wa.me/923294254904?text=', waUrl.startsWith('https://wa.me/923294254904?text='));
-      assert('WhatsApp URL text parameter is URL encoded', waUrl.includes('%E2%94%81%E2%94%81') || waUrl.includes('TOTAL%20ITEMS'));
+      assert('WhatsApp URL text parameter is URL encoded', waUrl.includes('%E2%94%81%E2%94%81') || waUrl.includes('TOTAL'));
 
       // 14. Offline Local Order Storage
       import('../js/storage.js').then(async (storage) => {
@@ -265,10 +263,8 @@
         const savedOrdersModule = await import('../js/components/savedOrders.js');
         const savedWaMsg = savedOrdersModule.generateSavedOrderWhatsAppMessage(saved);
         assert('generateSavedOrderWhatsAppMessage contains Shop Name', savedWaMsg.includes('Shop Name: Al-Rehman Mobiles'));
-        assert('generateSavedOrderWhatsAppMessage contains Model L-400', savedWaMsg.includes('*L-400* / ELVO Charger - Micro'));
-        assert('generateSavedOrderWhatsAppMessage contains Rate Rs. 389', savedWaMsg.includes('Rate: Rs. 389'));
-        assert('generateSavedOrderWhatsAppMessage contains Total Items: 5', savedWaMsg.includes('Total Items: 5'));
-        assert('generateSavedOrderWhatsAppMessage contains Grand Total: Rs. 1,405', savedWaMsg.includes('Grand Total: Rs. 1,405'));
+        assert('generateSavedOrderWhatsAppMessage contains Model L-400', savedWaMsg.includes('L-400 ELVO Charger | Micro | 2×389=778'));
+        assert('generateSavedOrderWhatsAppMessage contains Total line', savedWaMsg.includes('*TOTAL* 5 Items | *Rs. 1,405*'));
 
         // 18. Delete order
         storage.deleteOrder(saved.orderId);
@@ -475,8 +471,7 @@
 
         // WhatsApp message includes correct information
         const waMsg = generateWhatsAppMessage();
-        assert('Test 2: WhatsApp message includes Model / Description', waMsg.includes('*L-950* / Bluetooth Adapter'));
-        assert('Test 2: WhatsApp message includes Rate / Qty / Total', waMsg.includes('Rate: Rs. 799 / Qty: 2 / Total: Rs. 1,598'));
+        assert('Test 2: WhatsApp message includes Model / Description', waMsg.includes('L-950 Bluetooth Adapter | USB | 2×799=1598'));
 
         // TEST 3 — PRICE CHANGE
         // Save historical order with original price 799
@@ -535,7 +530,7 @@
         const wirelessProds = catalogRepo.getProductsByCategory('bluetooth-adapters');
         assert('Test 5: Existing products remain connected via categoryId', wirelessProds.some(p => p.modelNumber === 'L-950'));
         const waRenamedMsg = generateWhatsAppMessage();
-        assert('Test 5: WhatsApp message contains product L-950', waRenamedMsg.includes('*L-950* / Bluetooth Adapter'));
+        assert('Test 5: WhatsApp message contains product L-950', waRenamedMsg.includes('L-950 Bluetooth Adapter'));
 
         // TEST 6 — DYNAMIC SEARCH
         const searchL950 = catalogRepo.searchProducts('L-950');

@@ -84,12 +84,11 @@
         };
 
         const waMsg = generateWhatsAppMessage(fakeState);
-        assert('WhatsApp message contains exact header', waMsg.includes('*LOGIN ORDER INVOICE*'));
+        assert('WhatsApp message contains exact header', waMsg.includes('*LOGIN | WHOLESALE ORDER*'));
         assert('WhatsApp message contains Shop Name Metro Mobile Plaza', waMsg.includes('Shop Name: Metro Mobile Plaza'));
-        assert('WhatsApp message contains Phone Number', waMsg.includes('Phone: 03001234567'));
-        assert('WhatsApp message contains products in 2-line block format', waMsg.includes('*L-400* / ELVO Charger - Micro') && waMsg.includes('Rate: Rs. 389 / Qty: 4 / Total: Rs. 1,556'));
-        assert('WhatsApp message contains Total Items: 5', waMsg.includes('Total Items: 5'));
-        assert('WhatsApp message contains Grand Total: Rs. 4,355', waMsg.includes('Grand Total: Rs. 4,355'));
+        assert('WhatsApp message contains Phone Number', waMsg.includes('Customer No.: 03001234567'));
+        assert('WhatsApp message contains products in single-line format', waMsg.includes('L-400 ELVO Charger | Micro | 4×389=1556'));
+        assert('WhatsApp message contains Total line', waMsg.includes('*TOTAL* 5 Items | *Rs. 4,355*'));
         assert('WhatsApp recipient is 923294254904', WHATSAPP_PHONE === '923294254904');
 
         const waUrl = getWhatsAppUrl(fakeState);

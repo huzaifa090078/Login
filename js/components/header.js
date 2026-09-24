@@ -8,7 +8,7 @@
  * - Customer & Shop Details with auto-date
  */
 
-import { getState, updateCustomerInfo } from '../state.js';
+import { getState, updateCustomerInfo, subscribe } from '../state.js';
 import { getPendingOrdersCount, subscribeStorage } from '../storage.js';
 import { openSavedOrdersModal } from './savedOrders.js';
 import { openCatalogManagerModal } from './catalogManager.js';
@@ -164,6 +164,28 @@ export function renderHeader(container) {
       const count = getPendingOrdersCount();
       pill.textContent = count;
       pill.style.display = count > 0 ? 'inline-block' : 'none';
+    }
+  });
+
+  // State subscription to update customer fields when an order is loaded for edit
+  subscribe((eventType) => {
+    if (eventType === 'customer_updated' || eventType === 'order_loaded_for_edit') {
+      const currentState = getState();
+      if (shopNameInput && shopNameInput.value !== currentState.customerInfo.shopName) {
+        shopNameInput.value = currentState.customerInfo.shopName || '';
+      }
+      if (customerNameInput && customerNameInput.value !== currentState.customerInfo.customerName) {
+        customerNameInput.value = currentState.customerInfo.customerName || '';
+      }
+      if (customerPhoneInput && customerPhoneInput.value !== currentState.customerInfo.phone) {
+        customerPhoneInput.value = currentState.customerInfo.phone || '';
+      }
+      if (addressInput && addressInput.value !== currentState.customerInfo.address) {
+        addressInput.value = currentState.customerInfo.address || '';
+      }
+      if (dateInput && dateInput.value !== currentState.customerInfo.date) {
+        dateInput.value = currentState.customerInfo.date || '';
+      }
     }
   });
 }

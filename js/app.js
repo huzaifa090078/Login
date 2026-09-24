@@ -12,6 +12,7 @@ import { renderOrderSummary, updateOrderSummary } from './components/orderSummar
 import { renderSavedOrdersModal } from './components/savedOrders.js';
 import { renderCatalogManagerModal } from './components/catalogManager.js';
 import { updateCardQuantity } from './components/productCard.js';
+import { initNavigation } from './navigation.js';
 
 function initApp() {
   const headerContainer = document.getElementById('header-mount');
@@ -21,6 +22,9 @@ function initApp() {
   const summaryContainer = document.getElementById('summary-mount');
   const savedOrdersContainer = document.getElementById('saved-orders-mount');
   const catalogManagerContainer = document.getElementById('catalog-manager-mount');
+
+  // Initialize navigation / back button handling
+  initNavigation();
 
   // Initial Renders
   renderHeader(headerContainer);
@@ -65,6 +69,13 @@ function initApp() {
         updateOrderSummary(summaryContainer);
         break;
       }
+
+      case 'cart_cleared':
+      case 'order_loaded_for_edit':
+      case 'edit_order_changed':
+        renderProductList(productListContainer);
+        updateOrderSummary(summaryContainer);
+        break;
 
       default:
         break;

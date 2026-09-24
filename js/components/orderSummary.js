@@ -1,11 +1,12 @@
 /**
- * Order Summary & WhatsApp Dispatch Component (Offline-First)
+ * Order Summary, Actions & WhatsApp Dispatch Component (Offline-First)
  * 
  * Rules:
- * - When online: Opens WhatsApp with 923294254904 deep link and saves with status 'Sent'
- * - When offline: Saves locally with status 'Pending' and informs user:
- *   "You're offline. Order saved on this device. Connect to the internet to send it on WhatsApp."
- * - Pre-send validation: Shop Name, Customer Name, Address, Total Items > 0
+ * - Clear Items button with confirmation dialog ("Clear all selected items?" Cancel / Clear)
+ * - Save Order: Saves permanently to local database, triggers complete backup, shows "Order Saved Successfully"
+ * - Edit Order support: Updates in-place without duplicating
+ * - Send Order: Opens WhatsApp sharing (no hardcoded phone number)
+ * - Safe-area friendly & navigation stack integrated
  */
 
 import { 
@@ -18,44 +19,105 @@ import {
   isValidPakistaniPhoneNumber,
   normalizePakistaniPhoneNumber,
   getWhatsAppUrl,
-  WHATSAPP_PHONE,
   setQuantity,
-  updateCustomerInfo
+  clearCart,
+  updateCustomerInfo,
+  getActiveEditOrderId,
+  setActiveEditOrderId
 } from '../state.js';
 import { saveOrder } from '../storage.js';
-import { openSavedOrdersModal } from './savedOrders.js';
+import { openSavedOrdersModal, showToastNotification } from './savedOrders.js';
 import { ICONS, getCategoryIcon } from '../icons.js';
+import { pushModalNavigation, popModalNavigation, handleBackAction } from '../navigation.js';
 
 export function renderOrderSummary(container) {
   const totalItems = getTotalItems();
   const grandTotal = getGrandTotal();
+  const activeOrderId = getActiveEditOrderId();
 
   container.innerHTML = `
     <!-- Sticky Bottom Bar -->
     <div class="bottom-order-bar" id="order-summary-bar">
-      <div class="order-metrics" id="bar-view-summary" role="button" aria-label="View order breakdown" tabindex="0">
-        <div class="metrics-row-top">
-          <span class="metrics-label">TOTAL ITEMS:</span>
-          <span class="metric-items-badge" id="summary-items-count">${totalItems}</span>
-          <button type="button" class="btn-view-details metrics-view-hint" id="btn-view-details" aria-label="View Order Details">
-            View Details
-          </button>
-        </div>
-        <div class="metrics-row-bottom">
-          <span class="metrics-grand-label">GRAND TOTAL:</span>
-          <span class="metric-grand-total" id="summary-grand-total">${formatCurrency(grandTotal)}</span>
-        </div>
+      <!-- Edit Mode Banner -->
+      <div class="bar-edit-banner" id="bar-edit-banner" style="${activeOrderId ? 'display: flex;' : 'display: none;'}">
+        <span class="edit-banner-text" id="edit-banner-text">✏️ Editing: ${activeOrderId || ''}</span>
+        <button type="button" class="btn-cancel-edit-mode" id="btn-cancel-edit-mode" title="Exit Edit Mode">Cancel</button>
       </div>
 
-      <button 
-        type="button" 
-        class="btn-send-order" 
-        id="btn-send-order"
-        aria-label="Send Order to WhatsApp"
-      >
-        <span>SEND ORDER</span>
-        <span class="btn-wa-icon">${ICONS.whatsapp}</span>
-      </button>
+      <div class="bottom-bar-main-row">
+        <!-- Metrics (clickable to open Order Summary Modal) -->
+        <div class="order-metrics" id="bar-view-summary" role="button" aria-label="View order breakdown" tabindex="0">
+          <div class="metrics-row-top">
+            <span class="metrics-label">TOTAL ITEMS:</span>
+            <span class="metric-items-badge" id="summary-items-count">${totalItems}</span>
+            <button type="button" class="btn-view-details metrics-view-hint" id="btn-view-details" aria-label="View Order Details">
+              View Details
+            </button>
+          </div>
+          <div class="metrics-row-bottom">
+            <span class="metrics-grand-label">GRAND TOTAL:</span>
+            <span class="metric-grand-total" id="summary-grand-total">${formatCurrency(grandTotal)}</span>
+          </div>
+        </div>
+
+        <!-- Action Buttons: Clear Items, Save Order, Send Order -->
+        <div class="bottom-bar-actions">
+          <button 
+            type="button" 
+            class="btn-clear-items" 
+            id="btn-clear-items"
+            aria-label="Clear all selected items"
+            title="Clear all selected items"
+          >
+            <span class="btn-act-icon">${ICONS.trash || ICONS.clear}</span>
+            <span class="btn-clear-label">Clear Items</span>
+          </button>
+
+          <button 
+            type="button" 
+            class="btn-save-order" 
+            id="btn-save-order"
+            aria-label="Save Order"
+            title="Save order to local storage"
+          >
+            <span class="btn-act-icon">${ICONS.save || ICONS.check}</span>
+            <span id="btn-save-label">${activeOrderId ? 'UPDATE' : 'SAVE'}</span>
+          </button>
+
+          <button 
+            type="button" 
+            class="btn-send-order" 
+            id="btn-send-order"
+            aria-label="Send Order via WhatsApp"
+            title="Send Order via WhatsApp"
+          >
+            <span>SEND</span>
+            <span class="btn-wa-icon">${ICONS.whatsapp}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clear Items Confirmation Modal -->
+    <div class="modal-backdrop" id="clear-items-modal" aria-hidden="true">
+      <div class="modal-card modal-card-confirm">
+        <div class="modal-header header-confirm">
+          <div class="modal-title-wrap">
+            <h3 class="modal-title">Clear all selected items?</h3>
+            <span class="modal-subtitle">Customer details will be preserved</span>
+          </div>
+          <button type="button" class="modal-close-btn" id="clear-modal-close" aria-label="Cancel">${ICONS.close}</button>
+        </div>
+        
+        <div class="modal-body confirm-modal-body">
+          <p class="confirm-message">This will reset all product quantities to 0. Your shop name and customer details will remain untouched.</p>
+        </div>
+
+        <div class="modal-footer confirm-modal-footer">
+          <button type="button" class="btn-secondary" id="btn-cancel-clear">Cancel</button>
+          <button type="button" class="btn-danger-confirm" id="btn-confirm-clear">Clear</button>
+        </div>
+      </div>
     </div>
 
     <!-- Order Summary Modal -->
@@ -64,7 +126,7 @@ export function renderOrderSummary(container) {
         <div class="modal-header">
           <div class="modal-title-wrap">
             <h3 class="modal-title">WHOLESALE ORDER SUMMARY</h3>
-            <span class="modal-subtitle">Review items & send to WhatsApp (+92 329 4254904)</span>
+            <span class="modal-subtitle">Review items, save locally, or send via WhatsApp</span>
           </div>
           <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="Close summary">${ICONS.close}</button>
         </div>
@@ -73,8 +135,19 @@ export function renderOrderSummary(container) {
           <!-- Dynamic category-grouped content injected on open -->
         </div>
 
-        <div class="modal-footer">
+        <div class="modal-footer modal-footer-summary">
           <button type="button" class="btn-secondary" id="modal-btn-dismiss">Back to Catalog</button>
+          
+          <button type="button" class="btn-clear-items btn-modal-clear" id="modal-btn-clear-items">
+            <span>${ICONS.trash || ICONS.clear}</span>
+            <span>Clear Items</span>
+          </button>
+
+          <button type="button" class="btn-save-order btn-modal-save" id="modal-btn-save-order">
+            <span>${ICONS.save || ICONS.check}</span>
+            <span>${activeOrderId ? 'UPDATE ORDER' : 'SAVE ORDER'}</span>
+          </button>
+
           <button type="button" class="btn-send-order btn-modal-send" id="modal-btn-confirm-order">
             <span>SEND ORDER</span>
             <span>${ICONS.whatsapp}</span>
@@ -95,7 +168,7 @@ export function renderOrderSummary(container) {
         </div>
         
         <div class="modal-body validation-modal-body">
-          <p class="validation-intro">Cannot send order yet. The following details are required:</p>
+          <p class="validation-intro">Cannot save or send order yet. The following details are required:</p>
           <ul class="validation-error-list" id="validation-error-list"></ul>
         </div>
 
@@ -126,7 +199,7 @@ export function renderOrderSummary(container) {
         </div>
 
         <div class="modal-footer offline-modal-footer">
-          <button type="button" class="btn-secondary" id="btn-offline-view-pending">View Pending Orders</button>
+          <button type="button" class="btn-secondary" id="btn-offline-view-pending">View Saved Orders</button>
           <button type="button" class="btn-primary-yellow" id="btn-offline-start-new">Start New Order</button>
         </div>
       </div>
@@ -135,11 +208,21 @@ export function renderOrderSummary(container) {
 
   // Attach Event Handlers
   const sendOrderBtn = container.querySelector('#btn-send-order');
+  const saveOrderBtn = container.querySelector('#btn-save-order');
+  const clearItemsBtn = container.querySelector('#btn-clear-items');
+
   const viewSummaryMetrics = container.querySelector('#bar-view-summary');
   const summaryModal = container.querySelector('#order-summary-modal');
   const summaryCloseBtn = container.querySelector('#modal-close-btn');
   const summaryDismissBtn = container.querySelector('#modal-btn-dismiss');
   const modalSendBtn = container.querySelector('#modal-btn-confirm-order');
+  const modalSaveBtn = container.querySelector('#modal-btn-save-order');
+  const modalClearBtn = container.querySelector('#modal-btn-clear-items');
+
+  const clearModal = container.querySelector('#clear-items-modal');
+  const clearModalClose = container.querySelector('#clear-modal-close');
+  const cancelClearBtn = container.querySelector('#btn-cancel-clear');
+  const confirmClearBtn = container.querySelector('#btn-confirm-clear');
 
   const validationModal = container.querySelector('#validation-error-modal');
   const validationCloseBtn = container.querySelector('#validation-close-btn');
@@ -150,17 +233,50 @@ export function renderOrderSummary(container) {
   const offlineViewPendingBtn = container.querySelector('#btn-offline-view-pending');
   const offlineStartNewBtn = container.querySelector('#btn-offline-start-new');
 
+  const cancelEditBtn = container.querySelector('#btn-cancel-edit-mode');
+
+  // Modal open/close helpers
   const openSummaryModal = () => {
     populateModalContent(container);
     summaryModal.classList.add('open');
     summaryModal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+
+    pushModalNavigation('order-summary-modal', ({ fromBack }) => {
+      summaryModal.classList.remove('open');
+      summaryModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    });
   };
 
-  const closeSummaryModal = () => {
+  const closeSummaryModal = ({ fromBack = false } = {}) => {
     summaryModal.classList.remove('open');
     summaryModal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    if (!fromBack) {
+      popModalNavigation('order-summary-modal');
+    }
+  };
+
+  const openClearModal = () => {
+    if (getTotalItems() <= 0) {
+      showToastNotification('No items in order to clear');
+      return;
+    }
+    clearModal.classList.add('open');
+    clearModal.setAttribute('aria-hidden', 'false');
+    pushModalNavigation('clear-items-modal', ({ fromBack }) => {
+      clearModal.classList.remove('open');
+      clearModal.setAttribute('aria-hidden', 'true');
+    });
+  };
+
+  const closeClearModal = ({ fromBack = false } = {}) => {
+    clearModal.classList.remove('open');
+    clearModal.setAttribute('aria-hidden', 'true');
+    if (!fromBack) {
+      popModalNavigation('clear-items-modal');
+    }
   };
 
   const showValidationErrors = (errors) => {
@@ -170,12 +286,20 @@ export function renderOrderSummary(container) {
     validationModal.classList.add('open');
     validationModal.setAttribute('aria-hidden', 'false');
 
+    pushModalNavigation('validation-error-modal', ({ fromBack }) => {
+      validationModal.classList.remove('open');
+      validationModal.setAttribute('aria-hidden', 'true');
+    });
+
     highlightMissingCustomerFields();
   };
 
-  const closeValidationModal = () => {
+  const closeValidationModal = ({ fromBack = false } = {}) => {
     validationModal.classList.remove('open');
     validationModal.setAttribute('aria-hidden', 'true');
+    if (!fromBack) {
+      popModalNavigation('validation-error-modal');
+    }
     
     // Focus first invalid field
     const state = getState();
@@ -215,14 +339,74 @@ export function renderOrderSummary(container) {
     offlineModal.classList.add('open');
     offlineModal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+
+    pushModalNavigation('offline-saved-modal', ({ fromBack }) => {
+      offlineModal.classList.remove('open');
+      offlineModal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    });
   };
 
-  const closeOfflineModal = () => {
+  const closeOfflineModal = ({ fromBack = false } = {}) => {
     offlineModal.classList.remove('open');
     offlineModal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';
+    if (!fromBack) {
+      popModalNavigation('offline-saved-modal');
+    }
   };
 
+  // Build current snapshot payload
+  const buildCurrentOrderPayload = (status = 'Pending') => {
+    const state = getState();
+    const grouped = getOrderSummaryGrouped();
+    const allItems = [];
+    grouped.forEach(g => {
+      g.items.forEach(i => allItems.push(i));
+    });
+
+    const activeOrderId = getActiveEditOrderId();
+    return {
+      orderId: activeOrderId || undefined,
+      date: state.customerInfo.date,
+      shopName: state.customerInfo.shopName,
+      customerName: state.customerInfo.customerName,
+      phone: normalizePakistaniPhoneNumber(state.customerInfo.phone),
+      address: state.customerInfo.address,
+      items: allItems,
+      totalItems: getTotalItems(),
+      grandTotal: getGrandTotal(),
+      status
+    };
+  };
+
+  // Requirement 4: Save Order Permanently
+  const executeSaveOrder = () => {
+    const state = getState();
+    const validation = validateOrder(state);
+
+    if (!validation.isValid) {
+      closeSummaryModal();
+      showValidationErrors(validation.errors);
+      return;
+    }
+
+    const orderPayload = buildCurrentOrderPayload('Pending');
+    const wasEditing = Boolean(getActiveEditOrderId());
+    
+    // Save locally (updates in place if orderId exists, else inserts)
+    saveOrder(orderPayload);
+
+    if (wasEditing) {
+      setActiveEditOrderId(null);
+    }
+
+    closeSummaryModal();
+    showToastNotification('Order Saved Successfully');
+    updateOrderSummary(container);
+  };
+
+  // Send Order
   const executeSendOrder = () => {
     const state = getState();
     const validation = validateOrder(state);
@@ -233,58 +417,44 @@ export function renderOrderSummary(container) {
       return;
     }
 
-    // Build structured order payload
-    const grouped = getOrderSummaryGrouped();
-    const allItems = [];
-    grouped.forEach(g => {
-      g.items.forEach(i => allItems.push(i));
-    });
-
-    const orderPayload = {
-      date: state.customerInfo.date,
-      shopName: state.customerInfo.shopName,
-      customerName: state.customerInfo.customerName,
-      phone: normalizePakistaniPhoneNumber(state.customerInfo.phone),
-      address: state.customerInfo.address,
-      items: allItems,
-      totalItems: getTotalItems(),
-      grandTotal: getGrandTotal()
-    };
+    const orderPayload = buildCurrentOrderPayload('Sent');
+    const wasEditing = Boolean(getActiveEditOrderId());
 
     const isOnline = navigator.onLine;
 
     if (!isOnline) {
-      // OFFLINE: Save locally with status 'Pending'
+      // Offline: Save locally with status 'Pending'
       orderPayload.status = 'Pending';
       const saved = saveOrder(orderPayload);
+      if (wasEditing) setActiveEditOrderId(null);
 
       closeSummaryModal();
       showOfflineSavedDialog(saved);
       return;
     }
 
-    // ONLINE: Save with status 'Sent' and open WhatsApp deep link
+    // Online: Save with status 'Sent' and open WhatsApp
     orderPayload.status = 'Sent';
     saveOrder(orderPayload);
+    if (wasEditing) setActiveEditOrderId(null);
 
+    // Requirement 6 & 7: Open WhatsApp contact picker without hardcoding recipient
     const waUrl = getWhatsAppUrl(state);
     window.open(waUrl, '_blank');
 
     closeSummaryModal();
+    showToastNotification('Order Saved & WhatsApp Opened');
+    updateOrderSummary(container);
   };
 
-  // Reset form for next order
+  // Reset form
   const resetOrderForm = () => {
-    const state = getState();
-    // Clear cart
-    Object.keys(state.cart).forEach(productId => {
-      setQuantity(productId, 0);
-    });
-    // Clear customer inputs
+    clearCart();
     updateCustomerInfo('shopName', '');
     updateCustomerInfo('customerName', '');
     updateCustomerInfo('phone', '');
     updateCustomerInfo('address', '');
+    setActiveEditOrderId(null);
 
     const shopEl = document.getElementById('input-shop-name');
     const custEl = document.getElementById('input-customer-name');
@@ -296,11 +466,41 @@ export function renderOrderSummary(container) {
     if (addrEl) addrEl.value = '';
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    updateOrderSummary(container);
   };
 
   // Bind Listeners
   sendOrderBtn.addEventListener('click', executeSendOrder);
+  saveOrderBtn.addEventListener('click', executeSaveOrder);
+  clearItemsBtn.addEventListener('click', openClearModal);
+
   modalSendBtn.addEventListener('click', executeSendOrder);
+  if (modalSaveBtn) modalSaveBtn.addEventListener('click', executeSaveOrder);
+  if (modalClearBtn) modalClearBtn.addEventListener('click', openClearModal);
+
+  // Clear confirmation handlers
+  clearModalClose.addEventListener('click', () => { handleBackAction() || closeClearModal(); });
+  cancelClearBtn.addEventListener('click', () => { handleBackAction() || closeClearModal(); });
+  clearModal.addEventListener('click', (e) => {
+    if (e.target === clearModal) handleBackAction() || closeClearModal();
+  });
+
+  confirmClearBtn.addEventListener('click', () => {
+    clearCart();
+    handleBackAction() || closeClearModal();
+    closeSummaryModal();
+    showToastNotification('All items cleared');
+    updateOrderSummary(container);
+  });
+
+  // Cancel Edit Mode button
+  if (cancelEditBtn) {
+    cancelEditBtn.addEventListener('click', () => {
+      setActiveEditOrderId(null);
+      updateOrderSummary(container);
+      showToastNotification('Exited edit mode');
+    });
+  }
 
   const viewDetailsBtn = container.querySelector('#btn-view-details');
   if (viewDetailsBtn) {
@@ -318,19 +518,19 @@ export function renderOrderSummary(container) {
     }
   });
 
-  summaryCloseBtn.addEventListener('click', closeSummaryModal);
-  summaryDismissBtn.addEventListener('click', closeSummaryModal);
+  summaryCloseBtn.addEventListener('click', () => { handleBackAction() || closeSummaryModal(); });
+  summaryDismissBtn.addEventListener('click', () => { handleBackAction() || closeSummaryModal(); });
   summaryModal.addEventListener('click', (e) => {
-    if (e.target === summaryModal) closeSummaryModal();
+    if (e.target === summaryModal) handleBackAction() || closeSummaryModal();
   });
 
-  validationCloseBtn.addEventListener('click', closeValidationModal);
-  validationOkBtn.addEventListener('click', closeValidationModal);
+  validationCloseBtn.addEventListener('click', () => { handleBackAction() || closeValidationModal(); });
+  validationOkBtn.addEventListener('click', () => { handleBackAction() || closeValidationModal(); });
   validationModal.addEventListener('click', (e) => {
-    if (e.target === validationModal) closeValidationModal();
+    if (e.target === validationModal) handleBackAction() || closeValidationModal();
   });
 
-  offlineCloseBtn.addEventListener('click', closeOfflineModal);
+  offlineCloseBtn.addEventListener('click', () => { handleBackAction() || closeOfflineModal(); });
   offlineViewPendingBtn.addEventListener('click', () => {
     closeOfflineModal();
     openSavedOrdersModal();
@@ -395,12 +595,32 @@ function highlightMissingCustomerFields() {
 export function updateOrderSummary(container) {
   const itemsCountEl = container.querySelector('#summary-items-count');
   const grandTotalEl = container.querySelector('#summary-grand-total');
+  const activeOrderId = getActiveEditOrderId();
 
   const totalItems = getTotalItems();
   const grandTotal = getGrandTotal();
 
   if (itemsCountEl) itemsCountEl.textContent = totalItems;
   if (grandTotalEl) grandTotalEl.textContent = formatCurrency(grandTotal);
+
+  // Update Edit Mode banner
+  const banner = container.querySelector('#bar-edit-banner');
+  const bannerText = container.querySelector('#edit-banner-text');
+  const saveLabel = container.querySelector('#btn-save-label');
+  const modalSaveBtn = container.querySelector('#modal-btn-save-order');
+
+  if (banner) {
+    if (activeOrderId) {
+      banner.style.display = 'flex';
+      if (bannerText) bannerText.textContent = `✏️ Editing: ${activeOrderId}`;
+      if (saveLabel) saveLabel.textContent = 'UPDATE';
+      if (modalSaveBtn) modalSaveBtn.innerHTML = `<span>${ICONS.save || ICONS.check}</span><span>UPDATE ORDER</span>`;
+    } else {
+      banner.style.display = 'none';
+      if (saveLabel) saveLabel.textContent = 'SAVE';
+      if (modalSaveBtn) modalSaveBtn.innerHTML = `<span>${ICONS.save || ICONS.check}</span><span>SAVE ORDER</span>`;
+    }
+  }
 }
 
 function populateModalContent(container) {
@@ -510,7 +730,7 @@ function populateModalContent(container) {
     </div>
 
     <div class="modal-notice-box">
-      💬 <strong>WhatsApp Order:</strong> If online, clicking <strong>SEND ORDER</strong> formats the invoice and opens WhatsApp for <strong>+92 329 4254904</strong>. If offline, the order is automatically saved locally.
+      💬 <strong>Order Management:</strong> Click <strong>SAVE ORDER</strong> to store permanently on this device, or <strong>SEND ORDER</strong> to dispatch via WhatsApp.
     </div>
   `;
 }

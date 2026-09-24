@@ -24,6 +24,7 @@ const state = {
   selectedCategory: null, // Initial state: ALL categories closed
   searchQuery: '',
   cart: {}, // { [productId]: quantity }
+  activeEditOrderId: null // orderId if editing an existing order
 };
 
 const listeners = new Set();
@@ -106,6 +107,54 @@ export function decrementQuantity(productId) {
   }
 }
 
+export function clearCart() {
+  const productIds = Object.keys(state.cart);
+  state.cart = {};
+  productIds.forEach(id => {
+    notify('cart_updated', { productId: id, quantity: 0 });
+  });
+  notify('cart_cleared', {});
+}
+
+export function setActiveEditOrderId(orderId) {
+  state.activeEditOrderId = orderId || null;
+  notify('edit_order_changed', { orderId: state.activeEditOrderId });
+}
+
+export function getActiveEditOrderId() {
+  return state.activeEditOrderId;
+}
+
+export function loadOrderIntoForm(order) {
+  if (!order) return;
+
+  state.customerInfo.shopName = order.shopName || '';
+  state.customerInfo.customerName = order.customerName || '';
+  state.customerInfo.phone = order.phone || '';
+  state.customerInfo.address = order.address || '';
+  state.customerInfo.date = order.date || getTodayISODate();
+
+  // Clear existing cart and set new quantities
+  const oldIds = Object.keys(state.cart);
+  state.cart = {};
+  oldIds.forEach(id => {
+    notify('cart_updated', { productId: id, quantity: 0 });
+  });
+
+  (order.items || []).forEach(item => {
+    const pId = item.productId;
+    const qty = Number(item.quantity || 0);
+    if (pId && qty > 0) {
+      state.cart[pId] = qty;
+      notify('cart_updated', { productId: pId, quantity: qty });
+    }
+  });
+
+  state.activeEditOrderId = order.orderId;
+  notify('customer_updated', { field: 'all', customerInfo: state.customerInfo });
+  notify('order_loaded_for_edit', { order });
+}
+
 /**
  * Total Items means total units across all products, NOT number of unique products.
  */
@@ -171,7 +220,7 @@ export function getOrderSummaryGrouped() {
   return grouped;
 }
 
-export const WHATSAPP_PHONE = '923294254904';
+export const WHATSAPP_PHONE = '';
 
 export function formatDateForWhatsApp(isoDate) {
   if (!isoDate) {
@@ -246,8 +295,36 @@ export function formatWhatsAppProductLabel(item) {
   return `${baseLabel} — ${variant}`;
 }
 
+export function formatWhatsAppProductLine(item) {
+  const model = item.modelNumber ? String(item.modelNumber).trim() : '';
+  let productName = (item.productName || item.name || (item.product && (item.product.productName || item.product.name)) || '').trim();
+
+  let modelItemName = '';
+  if (model && productName) {
+    if (productName.toLowerCase().startsWith(model.toLowerCase())) {
+      modelItemName = productName;
+    } else {
+      modelItemName = `${model} ${productName}`;
+    }
+  } else {
+    modelItemName = model || productName || item.description || item.product?.description || 'Product';
+  }
+
+  const variant = (item.variant || item.description || (item.product && (item.product.variant || item.product.description)) || '').trim();
+  const qty = item.quantity || 0;
+  const rate = (typeof item.rate === 'number') ? item.rate : (typeof item.product?.rate === 'number' ? item.product.rate : 0);
+  const total = (typeof item.lineTotal === 'number') ? item.lineTotal : (rate * qty);
+
+  const calcPart = `${qty}×${rate}=${total}`;
+
+  if (variant) {
+    return `${modelItemName} | ${variant} | ${calcPart}`;
+  }
+  return `${modelItemName} | ${calcPart}`;
+}
+
 export function formatWhatsAppProductBlock(item) {
-  return `${formatWhatsAppProductLabel(item)}\n${formatCurrency(item.rate)} × ${item.quantity} = ${formatCurrency(item.lineTotal)}`;
+  return formatWhatsAppProductLine(item);
 }
 
 export function validateOrder(customState = state) {
@@ -330,11 +407,12 @@ export function generateWhatsAppMessage(customState = state) {
   const phone = customer.phone ? normalizePakistaniPhoneNumber(customer.phone) : '';
   const address = customer.address ? customer.address.trim() : '';
 
-  const categorySections = groupedItems.map(group => {
-    const categoryName = (group.category?.name || group.category?.id || 'Other Items').toUpperCase();
-    const productBlocks = group.items.map(formatWhatsAppProductBlock);
-    return `*${getWhatsAppCategoryEmoji(group.category)} ${categoryName}*\n\n${productBlocks.join('\n\n')}`;
+  const allItems = [];
+  groupedItems.forEach(group => {
+    group.items.forEach(item => allItems.push(item));
   });
+
+  const orderLines = allItems.map(formatWhatsAppProductLine).join('\n');
 
   return [
     divider,
@@ -353,13 +431,10 @@ export function generateWhatsAppMessage(customState = state) {
     divider,
     '*ORDER DETAILS*',
     '',
-    categorySections.join('\n\n'),
+    orderLines,
     '',
     divider,
-    '*ORDER TOTAL*',
-    `Total Items: ${totalItems}`,
-    `*Grand Total: ${formatCurrency(grandTotal)}*`,
-    '',
+    `*TOTAL* ${totalItems} Items | *${formatCurrency(grandTotal)}*`,
     divider,
     '*LOGIN WHOLESALE*',
     'Thank you for your order.'
@@ -367,9 +442,14 @@ export function generateWhatsAppMessage(customState = state) {
 }
 
 
-export function getWhatsAppUrl(customState = state) {
+export function getWhatsAppUrl(customState = state, recipientPhone = '') {
   const message = generateWhatsAppMessage(customState);
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
+  const phone = recipientPhone || '';
+  if (phone) {
+    const normalized = normalizePakistaniPhoneNumber(phone);
+    return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
+  }
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 }
 
 export function formatCurrency(amount) {
