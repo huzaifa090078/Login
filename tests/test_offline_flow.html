@@ -89,10 +89,10 @@
         assert('WhatsApp message contains Phone Number', waMsg.includes('Customer No.: 03001234567'));
         assert('WhatsApp message contains products in single-line format', waMsg.includes('L-400 ELVO Charger | Micro | 4×389=1556'));
         assert('WhatsApp message contains Total line', waMsg.includes('*TOTAL* 5 Items | *Rs. 4,355*'));
-        assert('WhatsApp recipient is 923294254904', WHATSAPP_PHONE === '923294254904');
+        assert('WhatsApp recipient is dynamic (not hardcoded)', WHATSAPP_PHONE === '');
 
         const waUrl = getWhatsAppUrl(fakeState);
-        assert('WhatsApp URL uses 923294254904 deep link', waUrl.startsWith('https://wa.me/923294254904?text='));
+        assert('WhatsApp URL uses dynamic send URL', waUrl.startsWith('https://api.whatsapp.com/send?text='));
 
         // 6. Status transition from Pending to Sent upon WhatsApp dispatch
         const markedSent = updateOrderStatus(savedOrder.orderId, 'Sent');

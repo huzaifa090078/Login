@@ -26,7 +26,8 @@ import {
   formatInvoiceDateForWhatsApp,
   normalizePakistaniPhoneNumber,
   formatWhatsAppProductBlock,
-  loadOrderIntoForm
+  loadOrderIntoForm,
+  getWhatsAppCategoryEmoji
 } from '../state.js';
 import { getCategories, getProductById } from '../catalog-data.js';
 import { ICONS } from '../icons.js';
@@ -590,12 +591,15 @@ export function generateSavedOrderWhatsAppMessage(order) {
     });
   }
 
-  const allItems = [];
-  groupedItems.forEach(group => {
-    group.items.forEach(item => allItems.push(item));
+  const categorySections = groupedItems.map(group => {
+    const categoryName = (group.category?.name || group.category?.id || 'Other Items').toUpperCase();
+    const emoji = getWhatsAppCategoryEmoji(group.category);
+    const heading = emoji ? `*${emoji} ${categoryName}*` : `*${categoryName}*`;
+    const itemLines = group.items.map(formatWhatsAppProductBlock).join('\n');
+    return `${heading}\n${itemLines}`;
   });
 
-  const orderLines = allItems.map(formatWhatsAppProductBlock).join('\n');
+  const orderDetailsText = categorySections.join('\n\n');
 
   return [
     divider,
@@ -614,7 +618,7 @@ export function generateSavedOrderWhatsAppMessage(order) {
     divider,
     '*ORDER DETAILS*',
     '',
-    orderLines,
+    orderDetailsText,
     '',
     divider,
     `*TOTAL* ${order.totalItems} Items | *${formatCurrency(order.grandTotal)}*`,

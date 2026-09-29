@@ -51,8 +51,15 @@ export function getState() {
 }
 
 export function updateCustomerInfo(field, value) {
-  state.customerInfo[field] = value;
-  notify('customer_updated', { field, value });
+  if (typeof field === 'object' && field !== null) {
+    Object.entries(field).forEach(([k, v]) => {
+      state.customerInfo[k] = v;
+      notify('customer_updated', { field: k, value: v });
+    });
+  } else {
+    state.customerInfo[field] = value;
+    notify('customer_updated', { field, value });
+  }
 }
 
 export function setSelectedCategory(categoryId) {
@@ -407,12 +414,15 @@ export function generateWhatsAppMessage(customState = state) {
   const phone = customer.phone ? normalizePakistaniPhoneNumber(customer.phone) : '';
   const address = customer.address ? customer.address.trim() : '';
 
-  const allItems = [];
-  groupedItems.forEach(group => {
-    group.items.forEach(item => allItems.push(item));
+  const categorySections = groupedItems.map(group => {
+    const categoryName = (group.category?.name || group.category?.id || 'Other Items').toUpperCase();
+    const emoji = getWhatsAppCategoryEmoji(group.category);
+    const heading = emoji ? `*${emoji} ${categoryName}*` : `*${categoryName}*`;
+    const itemLines = group.items.map(formatWhatsAppProductLine).join('\n');
+    return `${heading}\n${itemLines}`;
   });
 
-  const orderLines = allItems.map(formatWhatsAppProductLine).join('\n');
+  const orderDetailsText = categorySections.join('\n\n');
 
   return [
     divider,
@@ -431,7 +441,7 @@ export function generateWhatsAppMessage(customState = state) {
     divider,
     '*ORDER DETAILS*',
     '',
-    orderLines,
+    orderDetailsText,
     '',
     divider,
     `*TOTAL* ${totalItems} Items | *${formatCurrency(grandTotal)}*`,
