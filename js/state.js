@@ -414,6 +414,16 @@ export function generateWhatsAppMessage(customState = state) {
   const phone = customer.phone ? normalizePakistaniPhoneNumber(customer.phone) : '';
   const address = customer.address ? customer.address.trim() : '';
 
+  const customerLines = [];
+  if (shopName) customerLines.push(`Shop Name: ${shopName}`);
+  if (customerName) customerLines.push(`Customer Name: ${customerName}`);
+  if (phone) customerLines.push(`Customer No.: ${phone}`);
+  if (address) customerLines.push(`Address: ${address}`);
+
+  const customerBlock = customerLines.length > 0
+    ? ['*CUSTOMER DETAILS*', ...customerLines, '']
+    : [];
+
   const categorySections = groupedItems.map(group => {
     const categoryName = (group.category?.name || group.category?.id || 'Other Items').toUpperCase();
     const emoji = getWhatsAppCategoryEmoji(group.category);
@@ -432,12 +442,7 @@ export function generateWhatsAppMessage(customState = state) {
     '*DATE*',
     dateStr,
     '',
-    '*CUSTOMER DETAILS*',
-    `Shop Name: ${shopName}`,
-    `Customer Name: ${customerName}`,
-    `Customer No.: ${phone}`,
-    `Address: ${address}`,
-    '',
+    ...customerBlock,
     divider,
     '*ORDER DETAILS*',
     '',
@@ -460,6 +465,45 @@ export function getWhatsAppUrl(customState = state, recipientPhone = '') {
     return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
   }
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+}
+
+export function redirectToWhatsApp(message, recipientPhone = '') {
+  const encodedMsg = encodeURIComponent(message);
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+    (typeof navigator !== 'undefined' && navigator.userAgent) || ''
+  );
+
+  if (recipientPhone) {
+    const normalized = normalizePakistaniPhoneNumber(recipientPhone);
+    const waUrl = `https://wa.me/${normalized}?text=${encodedMsg}`;
+    if (isMobile) {
+      window.location.href = waUrl;
+    } else {
+      const opened = window.open(waUrl, '_blank');
+      if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+        window.location.href = waUrl;
+      }
+    }
+    return;
+  }
+
+  // Without specific recipient: allows sending to ANY contact via WhatsApp contact picker
+  if (isMobile) {
+    // 1. Direct native app deep link on mobile (launches WhatsApp contact picker instantly)
+    window.location.href = `whatsapp://send?text=${encodedMsg}`;
+
+    // 2. Fallback to web dispatch in case native scheme is not handled
+    setTimeout(() => {
+      window.location.href = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+    }, 1200);
+  } else {
+    // Desktop: Open WhatsApp Web / WhatsApp Desktop directly
+    const waUrl = `https://api.whatsapp.com/send?text=${encodedMsg}`;
+    const opened = window.open(waUrl, '_blank');
+    if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+      window.location.href = waUrl;
+    }
+  }
 }
 
 export function formatCurrency(amount) {

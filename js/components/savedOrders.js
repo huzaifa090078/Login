@@ -27,7 +27,8 @@ import {
   normalizePakistaniPhoneNumber,
   formatWhatsAppProductBlock,
   loadOrderIntoForm,
-  getWhatsAppCategoryEmoji
+  getWhatsAppCategoryEmoji,
+  redirectToWhatsApp
 } from '../state.js';
 import { getCategories, getProductById } from '../catalog-data.js';
 import { ICONS } from '../icons.js';
@@ -546,9 +547,6 @@ function handleSendSavedOrder(orderId, container) {
 
   // Generate WhatsApp message for saved order in preserved single-line format
   const message = generateSavedOrderWhatsAppMessage(order);
-  
-  // Requirement 6 & 7: Do NOT bind to hardcoded phone number; allow user to pick recipient
-  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 
   // Mark status as Sent
   updateOrderStatus(orderId, 'Sent');
@@ -556,8 +554,8 @@ function handleSendSavedOrder(orderId, container) {
     populateOrdersList(container);
   }
 
-  // Open WhatsApp
-  window.open(waUrl, '_blank');
+  // Open WhatsApp directly
+  redirectToWhatsApp(message, order.phone || '');
 }
 
 export function generateSavedOrderWhatsAppMessage(order) {
@@ -568,6 +566,16 @@ export function generateSavedOrderWhatsAppMessage(order) {
   const customerName = order.customerName ? order.customerName.trim() : '';
   const phone = order.phone ? normalizePakistaniPhoneNumber(order.phone) : '';
   const address = order.address ? order.address.trim() : '';
+
+  const customerLines = [];
+  if (shopName) customerLines.push(`Shop Name: ${shopName}`);
+  if (customerName) customerLines.push(`Customer Name: ${customerName}`);
+  if (phone) customerLines.push(`Customer No.: ${phone}`);
+  if (address) customerLines.push(`Address: ${address}`);
+
+  const customerBlock = customerLines.length > 0
+    ? ['*CUSTOMER DETAILS*', ...customerLines, '']
+    : [];
 
   const categories = getCategories();
   const groupedItems = categories.map(category => ({
@@ -609,12 +617,7 @@ export function generateSavedOrderWhatsAppMessage(order) {
     '*DATE*',
     dateStr,
     '',
-    '*CUSTOMER DETAILS*',
-    `Shop Name: ${shopName}`,
-    `Customer Name: ${customerName}`,
-    `Customer No.: ${phone}`,
-    `Address: ${address}`,
-    '',
+    ...customerBlock,
     divider,
     '*ORDER DETAILS*',
     '',

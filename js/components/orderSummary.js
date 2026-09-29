@@ -23,7 +23,8 @@ import {
   clearCart,
   updateCustomerInfo,
   getActiveEditOrderId,
-  setActiveEditOrderId
+  setActiveEditOrderId,
+  redirectToWhatsApp
 } from '../state.js';
 import { saveOrder } from '../storage.js';
 import { openSavedOrdersModal, showToastNotification } from './savedOrders.js';
@@ -368,11 +369,11 @@ export function renderOrderSummary(container) {
     const activeOrderId = getActiveEditOrderId();
     return {
       orderId: activeOrderId || undefined,
-      date: state.customerInfo.date,
-      shopName: state.customerInfo.shopName,
-      customerName: state.customerInfo.customerName,
-      phone: normalizePakistaniPhoneNumber(state.customerInfo.phone),
-      address: state.customerInfo.address,
+      date: state.customerInfo.date || new Date().toISOString().split('T')[0],
+      shopName: state.customerInfo.shopName || '',
+      customerName: state.customerInfo.customerName || (state.customerInfo.shopName || 'Wholesale Order'),
+      phone: normalizePakistaniPhoneNumber(state.customerInfo.phone) || '',
+      address: state.customerInfo.address || '',
       items: allItems,
       totalItems: getTotalItems(),
       grandTotal: getGrandTotal(),
@@ -380,14 +381,12 @@ export function renderOrderSummary(container) {
     };
   };
 
-  // Requirement 4: Save Order Permanently
+  // Save Order Permanently
   const executeSaveOrder = () => {
-    const state = getState();
-    const validation = validateOrder(state);
-
-    if (!validation.isValid) {
+    const totalItems = getTotalItems();
+    if (totalItems <= 0) {
       closeSummaryModal();
-      showValidationErrors(validation.errors);
+      showToastNotification('Please select at least 1 item to save');
       return;
     }
 
@@ -406,17 +405,21 @@ export function renderOrderSummary(container) {
     updateOrderSummary(container);
   };
 
-  // Send Order
+  // Send Order Directly via WhatsApp
   const executeSendOrder = () => {
-    const state = getState();
-    const validation = validateOrder(state);
+    const totalItems = getTotalItems();
 
-    if (!validation.isValid) {
+    if (totalItems <= 0) {
       closeSummaryModal();
-      showValidationErrors(validation.errors);
+      showToastNotification('Please select at least 1 item to order');
+      const categoryMount = document.getElementById('category-mount') || document.getElementById('product-list-mount');
+      if (categoryMount) {
+        categoryMount.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       return;
     }
 
+    const state = getState();
     const orderPayload = buildCurrentOrderPayload('Sent');
     const wasEditing = Boolean(getActiveEditOrderId());
 
@@ -433,18 +436,18 @@ export function renderOrderSummary(container) {
       return;
     }
 
-    // Online: Save with status 'Sent' and open WhatsApp
+    // Online: Save with status 'Sent' and redirect directly to WhatsApp
     orderPayload.status = 'Sent';
     saveOrder(orderPayload);
     if (wasEditing) setActiveEditOrderId(null);
 
-    // Requirement 6 & 7: Open WhatsApp contact picker without hardcoding recipient
-    const waUrl = getWhatsAppUrl(state);
-    window.open(waUrl, '_blank');
-
     closeSummaryModal();
-    showToastNotification('Order Saved & WhatsApp Opened');
+    showToastNotification('Redirecting to WhatsApp...');
     updateOrderSummary(container);
+
+    // Direct redirect to WhatsApp (allows choosing any contact in WhatsApp)
+    const message = generateWhatsAppMessage(state);
+    redirectToWhatsApp(message);
   };
 
   // Reset form
