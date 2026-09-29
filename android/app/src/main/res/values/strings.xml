@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LOGIN Wholesale</string>
+    <string name="title_activity_main">LOGIN Wholesale</string>
+    <string name="package_name">com.login.wholesale</string>
+    <string name="custom_url_scheme">com.login.wholesale</string>
+</resources>

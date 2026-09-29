@@ -1,0 +1,32 @@
+{
+  "name": "login",
+  "version": "1.0.0",
+  "description": "A mobile-first wholesale order-taking web application for **LOGIN**, designed for sales representatives visiting retail mobile shops.",
+  "main": "sw.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:web": "powershell -Command \"if (Test-Path 'www') { Remove-Item -Recurse -Force 'www' }; New-Item -ItemType Directory -Path 'www'; Copy-Item 'index.html', 'manifest.json', 'sw.js' -Destination 'www\\'; Copy-Item -Recurse 'css', 'js', 'data', 'icons' -Destination 'www\\'\"",
+    "sync": "npm run build:web && npx cap sync android",
+    "build:apk": "npm run sync && cd android && .\\gradlew.bat assembleDebug && cd .."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huzaifa090078/Login.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/huzaifa090078/Login/issues"
+  },
+  "homepage": "https://github.com/huzaifa090078/Login#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  }
+}
