@@ -264,25 +264,65 @@ export function getProductById(productId) {
   return currentProducts.find(p => p.id === productId) || null;
 }
 
+/**
+ * Normalize text for resilient search matching:
+ * e.g., "L-1947" -> "l1947", "1947" matches "l1947", "L 1947" matches "l-1947"
+ */
+export function cleanSearchToken(str) {
+  if (!str) return '';
+  return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 export function searchProducts(query, categoryFilter = null) {
-  const q = (query || '').trim().toLowerCase();
+  const rawQ = (query || '').trim().toLowerCase();
   const allInCat = getProductsByCategory(categoryFilter, true);
 
-  if (!q) {
+  if (!rawQ) {
     return allInCat;
   }
 
-  const terms = q.split(/\s+/).filter(Boolean);
+  // Terms split by whitespace
+  const rawTerms = rawQ.split(/\s+/).filter(Boolean);
+  const cleanTerms = rawTerms.map(t => cleanSearchToken(t)).filter(Boolean);
+  const fullCleanQ = cleanSearchToken(rawQ);
 
   return allInCat.filter(product => {
-    const model = (product.modelNumber || '').toLowerCase();
-    const name = (product.productName || product.name || '').toLowerCase();
-    const variant = (product.variant || '').toLowerCase();
-    const desc = (product.description || '').toLowerCase();
-    const catName = (getCategoryById(product.categoryId)?.name || '').toLowerCase();
+    const rawModel = (product.modelNumber || '').toLowerCase();
+    const rawName = (product.productName || product.name || '').toLowerCase();
+    const rawVariant = (product.variant || '').toLowerCase();
+    const rawDesc = (product.description || '').toLowerCase();
+    const rawCatName = (getCategoryById(product.categoryId)?.name || '').toLowerCase();
 
-    const searchTarget = `${model} ${name} ${variant} ${desc} ${catName}`;
-    return terms.every(term => searchTarget.includes(term));
+    // Standard string with original punctuation
+    const fullTarget = `${rawModel} ${rawName} ${rawVariant} ${rawDesc} ${rawCatName}`;
+
+    // Cleaned alphanumeric target (no dashes, spaces, symbols)
+    const cleanModel = cleanSearchToken(rawModel);
+    const cleanName = cleanSearchToken(rawName);
+    const cleanVariant = cleanSearchToken(rawVariant);
+    const cleanDesc = cleanSearchToken(rawDesc);
+    const cleanFullTarget = `${cleanModel}${cleanName}${cleanVariant}${cleanDesc}`;
+
+    // 1. Direct hit on model without hyphen/spaces (e.g. "1947" in "l1947" or "l1947" in "l1947")
+    if (fullCleanQ && cleanModel.includes(fullCleanQ)) {
+      return true;
+    }
+
+    // 2. Direct hit on full clean target
+    if (fullCleanQ && cleanFullTarget.includes(fullCleanQ)) {
+      return true;
+    }
+
+    // 3. Multi-word match: each search term must match either raw string or clean string
+    return rawTerms.every((rawTerm, idx) => {
+      const cleanTerm = cleanTerms[idx];
+      // Match raw substring
+      if (fullTarget.includes(rawTerm)) return true;
+      // Match cleaned substring (e.g. "l1947" matches "L-1947", "1947" matches "L-1947")
+      if (cleanTerm && cleanModel.includes(cleanTerm)) return true;
+      if (cleanTerm && cleanFullTarget.includes(cleanTerm)) return true;
+      return false;
+    });
   });
 }
 

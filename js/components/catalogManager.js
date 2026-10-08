@@ -23,7 +23,8 @@ import {
   exportCatalogJson,
   importCatalogJson,
   resetToDefaultCatalog,
-  subscribeCatalog
+  subscribeCatalog,
+  cleanSearchToken
 } from '../catalogRepository.js';
 import { formatCurrency } from '../state.js';
 import { ICONS, SUPPORTED_CATEGORY_ICONS, getCategoryIcon } from '../icons.js';
@@ -363,38 +364,176 @@ function renderCategoriesTab(contentEl, rootContainer) {
 
 function renderProductsTab(contentEl, rootContainer) {
   const categories = getCategories(true);
-  let products = getAllProducts(true);
 
-  // Apply category filter
-  if (selectedCategoryFilter !== 'all') {
-    products = products.filter(p => p.categoryId === selectedCategoryFilter || p.category === selectedCategoryFilter);
-  }
+  // Get filtered products
+  const getFilteredProducts = () => {
+    let prods = getAllProducts(true);
 
-  // Apply product status filter
-  if (statusFilter === 'in-stock') {
-    products = products.filter(p => p.status === 'in_stock');
-  } else if (statusFilter === 'out-of-stock') {
-    products = products.filter(p => p.status === 'out_of_stock');
-  } else if (statusFilter === 'coming-soon') {
-    products = products.filter(p => p.status === 'coming_soon');
-  }
+    if (selectedCategoryFilter !== 'all') {
+      prods = prods.filter(p => p.categoryId === selectedCategoryFilter || p.category === selectedCategoryFilter);
+    }
 
-  // Apply search query
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase().trim();
-    products = products.filter(p => {
-      const m = (p.modelNumber || '').toLowerCase();
-      const n = (p.productName || p.name || '').toLowerCase();
-      const v = (p.variant || '').toLowerCase();
-      const d = (p.description || '').toLowerCase();
-      return m.includes(q) || n.includes(q) || v.includes(q) || d.includes(q);
+    if (statusFilter === 'in-stock') {
+      prods = prods.filter(p => p.status === 'in_stock');
+    } else if (statusFilter === 'out-of-stock') {
+      prods = prods.filter(p => p.status === 'out_of_stock');
+    } else if (statusFilter === 'coming-soon') {
+      prods = prods.filter(p => p.status === 'coming_soon');
+    }
+
+    if (searchQuery.trim()) {
+      const rawQ = searchQuery.toLowerCase().trim();
+      const rawTerms = rawQ.split(/\s+/).filter(Boolean);
+      const cleanTerms = rawTerms.map(t => cleanSearchToken(t)).filter(Boolean);
+      const fullCleanQ = cleanSearchToken(rawQ);
+
+      prods = prods.filter(p => {
+        const rawModel = (p.modelNumber || '').toLowerCase();
+        const rawName = (p.productName || p.name || '').toLowerCase();
+        const rawVariant = (p.variant || '').toLowerCase();
+        const rawDesc = (p.description || '').toLowerCase();
+        const fullTarget = `${rawModel} ${rawName} ${rawVariant} ${rawDesc}`;
+
+        const cleanModel = cleanSearchToken(rawModel);
+        const cleanName = cleanSearchToken(rawName);
+        const cleanVariant = cleanSearchToken(rawVariant);
+        const cleanDesc = cleanSearchToken(rawDesc);
+        const cleanFullTarget = `${cleanModel}${cleanName}${cleanVariant}${cleanDesc}`;
+
+        if (fullCleanQ && cleanModel.includes(fullCleanQ)) return true;
+        if (fullCleanQ && cleanFullTarget.includes(fullCleanQ)) return true;
+
+        return rawTerms.every((rawTerm, idx) => {
+          const cleanTerm = cleanTerms[idx];
+          if (fullTarget.includes(rawTerm)) return true;
+          if (cleanTerm && cleanModel.includes(cleanTerm)) return true;
+          if (cleanTerm && cleanFullTarget.includes(cleanTerm)) return true;
+          return false;
+        });
+      });
+    }
+
+    return prods;
+  };
+
+  // Helper to render product list cards HTML
+  const buildProductCardsHtml = (productList) => {
+    if (productList.length === 0) {
+      return `
+        <div class="admin-empty-state">
+          <div class="empty-icon">${ICONS.searchEmpty}</div>
+          <p>No products match the selected criteria.</p>
+        </div>
+      `;
+    }
+
+    return productList.map(prod => {
+      const cat = getCategoryById(prod.categoryId || prod.category);
+      const productStatus = prod.status || 'in_stock';
+      const isInStock = productStatus === 'in_stock';
+      const isOutOfStock = productStatus === 'out_of_stock';
+      const statusLabel = isInStock ? 'In Stock' : (isOutOfStock ? 'Out of Stock' : 'Coming Soon');
+
+      return `
+        <div class="admin-product-card ${productStatus === 'coming_soon' ? 'is-coming-soon' : ''} ${isOutOfStock ? 'is-out-of-stock' : ''}">
+          <div class="prod-card-top">
+            <div class="prod-model-title-wrap">
+              <span class="model-badge">${escapeHtml(prod.modelNumber)}</span>
+              <span class="admin-cat-pill">${cat ? escapeHtml(cat.name) : (prod.categoryId || 'General')}</span>
+            </div>
+            <div class="prod-rate-wrap">
+              ${prod.rate !== null && prod.rate !== undefined
+                ? `<span class="admin-prod-rate">${formatCurrency(prod.rate)}</span>` 
+                : `<span class="rate-coming-soon">${statusLabel.toUpperCase()}</span>`
+              }
+            </div>
+          </div>
+
+          <div class="prod-card-body">
+            <div class="admin-prod-name">${escapeHtml(prod.productName || prod.name)}</div>
+            ${prod.variant ? `<div class="admin-prod-variant">${escapeHtml(prod.variant)}</div>` : ''}
+            ${prod.description && prod.description !== prod.variant ? `<div class="admin-prod-desc">${escapeHtml(prod.description)}</div>` : ''}
+          </div>
+
+          <div class="prod-card-footer">
+            <div class="prod-id-tag">ID: <code>${escapeHtml(prod.id)}</code></div>
+            <div class="prod-action-btns">
+              <button 
+                type="button" 
+                class="btn-status-toggle ${isInStock ? 'status-active' : (isOutOfStock ? 'status-out-of-stock' : 'status-pending')}"
+                data-action="toggle-prod" 
+                data-id="${prod.id}"
+                title="Click to cycle product status"
+              >
+                ${statusLabel}
+              </button>
+              <button type="button" class="btn-admin-icon" data-action="edit-prod" data-id="${prod.id}" title="Edit Product">
+                ${ICONS.edit}
+              </button>
+              <button type="button" class="btn-admin-icon btn-admin-delete" data-action="delete-prod" data-id="${prod.id}" title="Permanently Delete Product" aria-label="Permanently delete ${escapeHtml(prod.productName || prod.name)}">
+                ${ICONS.trash}
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  const bindProductCardEvents = (listContainer) => {
+    listContainer.querySelectorAll('[data-action="edit-prod"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const prodId = btn.getAttribute('data-id');
+        openProductEditor(rootContainer, prodId);
+      });
     });
+
+    listContainer.querySelectorAll('[data-action="toggle-prod"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const prodId = btn.getAttribute('data-id');
+        const prod = getProductById(prodId);
+        if (prod) {
+          const nextStatus = prod.status === 'in_stock'
+            ? 'out_of_stock'
+            : prod.status === 'out_of_stock'
+              ? 'coming_soon'
+              : 'in_stock';
+          updateProduct(prodId, { status: nextStatus });
+        }
+      });
+    });
+
+    listContainer.querySelectorAll('[data-action="delete-prod"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const prodId = btn.getAttribute('data-id');
+        const prod = getProductById(prodId);
+        if (!prod) return;
+        openDeleteConfirmation(rootContainer, prodId);
+      });
+    });
+  };
+
+  // Check if structure already exists in contentEl so we DO NOT destroy the active search input
+  const existingList = contentEl.querySelector('#admin-products-list-wrap');
+  const existingSearchInput = contentEl.querySelector('#admin-product-search');
+
+  if (existingList && existingSearchInput) {
+    const filteredProducts = getFilteredProducts();
+    const headingEl = contentEl.querySelector('#admin-products-heading');
+    if (headingEl) {
+      headingEl.textContent = `Wholesale Products (${filteredProducts.length})`;
+    }
+    existingList.innerHTML = buildProductCardsHtml(filteredProducts);
+    bindProductCardEvents(existingList);
+    return;
   }
+
+  const initialProducts = getFilteredProducts();
 
   contentEl.innerHTML = `
     <div class="catalog-tab-header">
       <div class="tab-header-left">
-        <h4 class="tab-heading">Wholesale Products (${products.length})</h4>
+        <h4 class="tab-heading" id="admin-products-heading">Wholesale Products (${initialProducts.length})</h4>
         <p class="tab-subheading">Manage catalog items, pricing, and availability</p>
       </div>
       <button type="button" class="btn-send-order btn-compact" id="btn-add-product">
@@ -431,118 +570,54 @@ function renderProductsTab(contentEl, rootContainer) {
       </div>
     </div>
 
-    <div class="products-admin-list">
-      ${products.length === 0 ? `
-        <div class="admin-empty-state">
-          <div class="empty-icon">${ICONS.searchEmpty}</div>
-          <p>No products match the selected criteria.</p>
-        </div>
-      ` : products.map(prod => {
-        const cat = getCategoryById(prod.categoryId || prod.category);
-        const productStatus = prod.status || 'in_stock';
-        const isInStock = productStatus === 'in_stock';
-        const isOutOfStock = productStatus === 'out_of_stock';
-        const statusLabel = isInStock ? 'In Stock' : (isOutOfStock ? 'Out of Stock' : 'Coming Soon');
-        return `
-          <div class="admin-product-card ${productStatus === 'coming_soon' ? 'is-coming-soon' : ''} ${isOutOfStock ? 'is-out-of-stock' : ''}">
-            <div class="prod-card-top">
-              <div class="prod-model-title-wrap">
-                <span class="model-badge">${escapeHtml(prod.modelNumber)}</span>
-                <span class="admin-cat-pill">${cat ? escapeHtml(cat.name) : (prod.categoryId || 'General')}</span>
-              </div>
-              <div class="prod-rate-wrap">
-                ${prod.rate !== null && prod.rate !== undefined
-                  ? `<span class="admin-prod-rate">${formatCurrency(prod.rate)}</span>` 
-                  : `<span class="rate-coming-soon">${statusLabel.toUpperCase()}</span>`
-                }
-              </div>
-            </div>
-
-            <div class="prod-card-body">
-              <div class="admin-prod-name">${escapeHtml(prod.productName || prod.name)}</div>
-              ${prod.variant ? `<div class="admin-prod-variant">${escapeHtml(prod.variant)}</div>` : ''}
-              ${prod.description && prod.description !== prod.variant ? `<div class="admin-prod-desc">${escapeHtml(prod.description)}</div>` : ''}
-            </div>
-
-            <div class="prod-card-footer">
-              <div class="prod-id-tag">ID: <code>${escapeHtml(prod.id)}</code></div>
-              <div class="prod-action-btns">
-                <button 
-                  type="button" 
-                  class="btn-status-toggle ${isInStock ? 'status-active' : (isOutOfStock ? 'status-out-of-stock' : 'status-pending')}"
-                  data-action="toggle-prod" 
-                  data-id="${prod.id}"
-                  title="Click to cycle product status"
-                >
-                  ${statusLabel}
-                </button>
-                <button type="button" class="btn-admin-icon" data-action="edit-prod" data-id="${prod.id}" title="Edit Product">
-                  ${ICONS.edit}
-                </button>
-                <button type="button" class="btn-admin-icon btn-admin-delete" data-action="delete-prod" data-id="${prod.id}" title="Permanently Delete Product" aria-label="Permanently delete ${escapeHtml(prod.productName || prod.name)}">
-                  ${ICONS.trash}
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('')}
+    <div class="products-admin-list" id="admin-products-list-wrap">
+      ${buildProductCardsHtml(initialProducts)}
     </div>
   `;
+
+  const listContainer = contentEl.querySelector('#admin-products-list-wrap');
+  bindProductCardEvents(listContainer);
 
   // Attach search & filter listeners
   const searchInput = contentEl.querySelector('#admin-product-search');
   searchInput?.addEventListener('input', (e) => {
     searchQuery = e.target.value;
-    renderProductsTab(contentEl, rootContainer);
+    const updated = getFilteredProducts();
+    const headingEl = contentEl.querySelector('#admin-products-heading');
+    if (headingEl) {
+      headingEl.textContent = `Wholesale Products (${updated.length})`;
+    }
+    listContainer.innerHTML = buildProductCardsHtml(updated);
+    bindProductCardEvents(listContainer);
   });
 
   const catSelect = contentEl.querySelector('#admin-category-filter');
   catSelect?.addEventListener('change', (e) => {
     selectedCategoryFilter = e.target.value;
-    renderProductsTab(contentEl, rootContainer);
+    const updated = getFilteredProducts();
+    const headingEl = contentEl.querySelector('#admin-products-heading');
+    if (headingEl) {
+      headingEl.textContent = `Wholesale Products (${updated.length})`;
+    }
+    listContainer.innerHTML = buildProductCardsHtml(updated);
+    bindProductCardEvents(listContainer);
   });
 
   const statusSelect = contentEl.querySelector('#admin-status-filter');
   statusSelect?.addEventListener('change', (e) => {
     statusFilter = e.target.value;
-    renderProductsTab(contentEl, rootContainer);
+    const updated = getFilteredProducts();
+    const headingEl = contentEl.querySelector('#admin-products-heading');
+    if (headingEl) {
+      headingEl.textContent = `Wholesale Products (${updated.length})`;
+    }
+    listContainer.innerHTML = buildProductCardsHtml(updated);
+    bindProductCardEvents(listContainer);
   });
 
-  // Product Add / Edit listeners
+  // Product Add listener
   contentEl.querySelector('#btn-add-product')?.addEventListener('click', () => {
     openProductEditor(rootContainer, null);
-  });
-
-  contentEl.querySelectorAll('[data-action="edit-prod"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const prodId = btn.getAttribute('data-id');
-      openProductEditor(rootContainer, prodId);
-    });
-  });
-
-  contentEl.querySelectorAll('[data-action="toggle-prod"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const prodId = btn.getAttribute('data-id');
-      const prod = getProductById(prodId);
-      if (prod) {
-        const nextStatus = prod.status === 'in_stock'
-          ? 'out_of_stock'
-          : prod.status === 'out_of_stock'
-            ? 'coming_soon'
-            : 'in_stock';
-        updateProduct(prodId, { status: nextStatus });
-      }
-    });
-  });
-
-  contentEl.querySelectorAll('[data-action="delete-prod"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const prodId = btn.getAttribute('data-id');
-      const prod = getProductById(prodId);
-      if (!prod) return;
-      openDeleteConfirmation(rootContainer, prodId);
-    });
   });
 }
 
