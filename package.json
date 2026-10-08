@@ -26,7 +26,9 @@
   "homepage": "https://github.com/huzaifa090078/Login#readme",
   "dependencies": {
     "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/cli": "^8.5.2",
-    "@capacitor/core": "^8.5.2"
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/status-bar": "^8.0.4"
   }
 }

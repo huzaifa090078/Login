@@ -27,6 +27,7 @@ import {
 } from '../catalogRepository.js';
 import { formatCurrency } from '../state.js';
 import { ICONS, SUPPORTED_CATEGORY_ICONS, getCategoryIcon } from '../icons.js';
+import { pushModalNavigation, popModalNavigation } from '../navigation.js';
 
 let activeTab = 'products'; // 'products' | 'categories' | 'backup'
 let selectedCategoryFilter = 'all';
@@ -244,6 +245,11 @@ export function openCatalogManagerModal() {
     modal.setAttribute('aria-hidden', 'false');
     const container = modal.closest('#catalog-manager-mount') || document.body;
     renderCurrentTab(container);
+
+    pushModalNavigation('catalog-manager-modal', () => {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    });
   }
 }
 
@@ -252,6 +258,7 @@ export function closeCatalogManagerModal() {
   if (modal) {
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
+    popModalNavigation('catalog-manager-modal');
   }
 }
 
